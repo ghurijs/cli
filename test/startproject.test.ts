@@ -83,7 +83,9 @@ describe('startProject (d1)', () => {
     const settings = read(dir, 'src/settings.ts')
     expect(settings).toContain("env.DATABASE_URL ? postgres({ url: env.DATABASE_URL }) : d1('DB')")
     expect(settings).toContain("default: r2('MEDIA')")
-    expect(settings).toMatch(/INSTALLED_APPS: \[\s+AuthConfig,\s+AdminConfig,\s+\]/)
+    expect(settings).toMatch(
+      /INSTALLED_APPS: \[\s+ContentTypesConfig,\s+AuthConfig,\s+SessionsConfig,\s+AuthTokenConfig,\s+AdminConfig,\s+\]/,
+    )
     expect(settings).toContain('REST_FRAMEWORK')
     expect(read(dir, 'src/urls.ts')).toContain("path('admin/', admin.site.urls)")
     expect(read(dir, 'src/urls.ts')).toContain("path('api/', include(router.urls))")

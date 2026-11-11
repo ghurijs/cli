@@ -2,7 +2,14 @@
 // .dev.vars) on Cloudflare, or process.env on Node. Never read env.DB / env.MEDIA in app code:
 // databases, storage and caches are configured here so the project stays portable.
 import { AdminConfig } from '@ghuri/admin'
-import { AuthConfig, AuthenticationMiddleware, SessionMiddleware } from '@ghuri/auth'
+import {
+  AuthConfig,
+  AuthenticationMiddleware,
+  AuthTokenConfig,
+  ContentTypesConfig,
+  SessionMiddleware,
+  SessionsConfig,
+} from '@ghuri/auth'
 import { SessionAuthentication, TokenAuthentication } from '@ghuri/auth/rest'
 import {
   CommonMiddleware,
@@ -35,7 +42,10 @@ export default defineSettings((env) => ({
   ALLOWED_HOSTS: env.ALLOWED_HOSTS ? String(env.ALLOWED_HOSTS).split(',') : ['*'],
 
   INSTALLED_APPS: [
+    ContentTypesConfig,
     AuthConfig,
+    SessionsConfig,
+    AuthTokenConfig,
     AdminConfig,
   ],
 
