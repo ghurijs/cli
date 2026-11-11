@@ -1,0 +1,84 @@
+{
+  "name": "@ghuri/cli",
+  "version": "0.1.0-alpha.0",
+  "description": "The ghuri command-line tool: startproject, startapp, runserver, migrate and more",
+  "type": "module",
+  "license": "MIT",
+  "author": "Ghuri contributors",
+  "homepage": "https://github.com/ghurijs/cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ghurijs/cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ghurijs/cli/issues"
+  },
+  "keywords": [
+    "ghuri",
+    "django",
+    "cloudflare",
+    "workers",
+    "hono",
+    "drizzle",
+    "d1",
+    "r2",
+    "framework"
+  ],
+  "bin": {
+    "ghuri": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src test",
+    "format": "biome format --write src test"
+  },
+  "dependencies": {
+    "@ghuri/core": "^0.1.0-alpha.0",
+    "@ghuri/orm": "^0.1.0-alpha.0",
+    "jiti": "^2.7.0",
+    "@clack/prompts": "^1.9.0",
+    "picocolors": "^1.1.1"
+  },
+  "peerDependencies": {
+    "hono": "^4.13.0",
+    "wrangler": "^4.160.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "tsup": "^8.5.1",
+    "vitest": "^5.1.0",
+    "@biomejs/biome": "^2.6.6",
+    "@types/node": "^24.0.0",
+    "hono": "^4.13.0",
+    "wrangler": "^4.160.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "next"
+  },
+  "peerDependenciesMeta": {
+    "wrangler": {
+      "optional": true
+    }
+  }
+}
