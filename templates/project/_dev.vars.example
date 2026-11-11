@@ -1,0 +1,13 @@
+# Copy to .dev.vars for local development (`ghuri startproject` already created one for you).
+# In production, set secrets with:  npx wrangler secret put SECRET_KEY
+SECRET_KEY=ghuri-insecure-change-me
+DEBUG=true
+{{#if postgres}}
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/{{pkgName}}
+{{/if}}
+{{#if sqlite}}
+DATABASE_PATH=db.sqlite3
+{{/if}}
+{{#if !postgres}}
+# DATABASE_URL=postgres://user:password@localhost:5432/{{pkgName}}   # switch DATABASES to Postgres
+{{/if}}

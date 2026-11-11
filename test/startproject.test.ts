@@ -1,0 +1,189 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { afterAll, describe, expect, it } from 'vitest'
+import { parseJsonc } from '../src/project'
+import { COMPATIBILITY_DATE, generateSecretKey, startProject } from '../src/scaffold'
+import { cleanTmp, run, tmpDir } from './helpers'
+
+afterAll(cleanTmp)
+
+const read = (dir: string, f: string) => readFileSync(join(dir, f), 'utf8')
+
+function noPlaceholders(dir: string, files: string[]) {
+  for (const f of files) expect(read(dir, f), f).not.toMatch(/\{\{|\}\}(?!\s*\))/)
+}
+
+describe('startProject (d1)', () => {
+  const cwd = tmpDir('sp')
+  const result = startProject({ name: 'my_site', cwd, db: 'd1', pm: 'npm', secretKey: 'k'.repeat(64) })
+  const dir = result.directory
+
+  it('writes the spec §11 layout', () => {
+    expect(dir).toBe(join(cwd, 'my_site'))
+    expect(result.files.sort()).toEqual(
+      [
+        '.dev.vars',
+        '.dev.vars.example',
+        '.gitignore',
+        'README.md',
+        'package.json',
+        'src/index.ts',
+        'src/server.ts',
+        'src/settings.ts',
+        'src/urls.ts',
+        'tsconfig.json',
+        'vitest.config.ts',
+        'wrangler.jsonc',
+      ].sort(),
+    )
+    for (const f of result.files) expect(existsSync(join(dir, f)), f).toBe(true)
+    noPlaceholders(dir, result.files)
+  })
+
+  it('renders a valid package.json', () => {
+    const pkg = JSON.parse(read(dir, 'package.json'))
+    expect(pkg.name).toBe('my-site')
+    expect(pkg.type).toBe('module')
+    expect(pkg.ghuri).toEqual({ settings: 'src/settings.ts' })
+    for (const s of ['dev', 'deploy', 'migrate', 'makemigrations', 'test', 'ghuri'])
+      expect(pkg.scripts[s]).toBeTruthy()
+    for (const d of [
+      '@ghuri/core',
+      '@ghuri/orm',
+      '@ghuri/auth',
+      '@ghuri/rest',
+      '@ghuri/admin',
+      '@ghuri/storage',
+    ]) {
+      expect(pkg.dependencies[d]).toBe('^0.1.0-alpha.0')
+    }
+    for (const d of ['wrangler', 'typescript', 'vitest', '@cloudflare/workers-types', '@ghuri/cli']) {
+      expect(pkg.devDependencies[d]).toBeTruthy()
+    }
+  })
+
+  it('renders wrangler.jsonc with nodejs_compat and DB/MEDIA bindings', () => {
+    const cfg = parseJsonc(read(dir, 'wrangler.jsonc'))
+    expect(cfg.name).toBe('my-site')
+    expect(cfg.main).toBe('src/index.ts')
+    expect(cfg.compatibility_flags).toContain('nodejs_compat')
+    expect(cfg.compatibility_date).toBe(COMPATIBILITY_DATE)
+    expect(cfg.d1_databases[0]).toMatchObject({ binding: 'DB', database_name: 'my-site-db' })
+    expect(cfg.r2_buckets[0]).toMatchObject({ binding: 'MEDIA' })
+    expect(read(dir, 'wrangler.jsonc')).toContain('wrangler d1 create my-site-db')
+  })
+
+  it('writes the secret key to .dev.vars only', () => {
+    expect(read(dir, '.dev.vars')).toContain(`SECRET_KEY=${'k'.repeat(64)}`)
+    expect(read(dir, '.dev.vars.example')).not.toContain('k'.repeat(64))
+    expect(read(dir, '.gitignore')).toMatch(/^\.dev\.vars$/m)
+  })
+
+  it('renders settings that switch on DATABASE_URL', () => {
+    const settings = read(dir, 'src/settings.ts')
+    expect(settings).toContain("env.DATABASE_URL ? postgres({ url: env.DATABASE_URL }) : d1('DB')")
+    expect(settings).toContain("default: r2('MEDIA')")
+    expect(settings).toMatch(/INSTALLED_APPS: \[\s+AuthConfig,\s+AdminConfig,\s+\]/)
+    expect(settings).toContain('REST_FRAMEWORK')
+    expect(read(dir, 'src/urls.ts')).toContain("path('admin/', admin.site.urls)")
+    expect(read(dir, 'src/urls.ts')).toContain("path('api/', include(router.urls))")
+    expect(read(dir, 'src/index.ts')).toContain('export default createApp(settings)')
+  })
+
+  it('suggests next steps', () => {
+    expect(result.nextSteps).toEqual([
+      'cd my_site',
+      'npm install',
+      expect.stringContaining('npx wrangler d1 create my-site-db'),
+      'npx ghuri migrate',
+      'npx ghuri createsuperuser',
+      'npm run dev',
+    ])
+  })
+})
+
+describe('startProject (postgres / sqlite)', () => {
+  it('postgres uses Hyperdrive or DATABASE_URL and keeps wrangler', () => {
+    const r = startProject({ name: 'pg', cwd: tmpDir('sp'), db: 'postgres', pm: 'pnpm' })
+    const settings = read(r.directory, 'src/settings.ts')
+    expect(settings).toContain("postgres({ hyperdrive: 'HYPERDRIVE' })")
+    expect(settings).not.toContain('d1(')
+    expect(read(r.directory, '.dev.vars')).toContain('DATABASE_URL=postgres://')
+    expect(parseJsonc(read(r.directory, 'wrangler.jsonc')).d1_databases).toBeUndefined()
+    JSON.parse(read(r.directory, 'package.json'))
+    expect(r.nextSteps).toContain('pnpm exec ghuri migrate')
+    noPlaceholders(r.directory, r.files)
+  })
+
+  it('sqlite is a Node project without wrangler', () => {
+    const r = startProject({ name: 'lite', cwd: tmpDir('sp'), db: 'sqlite', pm: 'bun' })
+    expect(r.files).not.toContain('wrangler.jsonc')
+    const pkg = JSON.parse(read(r.directory, 'package.json'))
+    expect(pkg.scripts.dev).toBe('ghuri runserver --node')
+    expect(pkg.scripts.deploy).toBeUndefined()
+    expect(pkg.dependencies['better-sqlite3']).toBeTruthy()
+    expect(pkg.devDependencies.wrangler).toBeUndefined()
+    const settings = read(r.directory, 'src/settings.ts')
+    expect(settings).toContain("import { sqlite } from '@ghuri/orm/sqlite'")
+    expect(settings).toContain('fileSystemStorage(')
+    expect(JSON.parse(read(r.directory, 'tsconfig.json')).compilerOptions.types).toEqual(['node'])
+    noPlaceholders(r.directory, r.files)
+  })
+})
+
+describe('startProject errors', () => {
+  it('rejects invalid names, unknown databases and non-empty directories', () => {
+    const cwd = tmpDir('sp')
+    expect(() => startProject({ name: '1bad', cwd })).toThrow(/not a valid project name/)
+    expect(() => startProject({ name: 'ok', cwd, db: 'mongo' as any })).toThrow(/--db must be one of/)
+    mkdirSync(join(cwd, 'taken'))
+    writeFileSync(join(cwd, 'taken', 'x'), '')
+    expect(() => startProject({ name: 'taken', cwd })).toThrow(/not empty/)
+  })
+
+  it('generates long random secret keys', () => {
+    const a = generateSecretKey()
+    expect(a).toHaveLength(64)
+    expect(a).not.toBe(generateSecretKey())
+    expect(a).toMatch(/^[A-Za-z0-9_-]+$/)
+  })
+})
+
+describe('ghuri startproject', () => {
+  it('creates the project and installs with the chosen package manager', async () => {
+    const cwd = tmpDir('sp')
+    const calls: Array<[string, string[], string]> = []
+    const { code, out } = await run(['startproject', 'shop', '--pm', 'pnpm', '--db', 'postgres'], {
+      cwd,
+      spawn: async (cmd, args, o) => {
+        calls.push([cmd, args, o.cwd])
+        return 0
+      },
+    })
+    expect(code).toBe(0)
+    expect(calls).toEqual([['pnpm', ['install'], join(cwd, 'shop')]])
+    expect(out).toContain("Created Ghuri project 'shop'")
+    expect(out).toContain('pnpm exec ghuri createsuperuser')
+    expect(out).not.toContain('  pnpm install\n')
+  })
+
+  it('--no-install skips installation and works with a target directory', async () => {
+    const cwd = tmpDir('sp')
+    const { code, out } = await run(['startproject', 'blog', 'site-dir', '--no-install'], {
+      cwd,
+      spawn: async () => {
+        throw new Error('should not spawn')
+      },
+    })
+    expect(code).toBe(0)
+    expect(existsSync(join(cwd, 'site-dir', 'wrangler.jsonc'))).toBe(true)
+    expect(out).toContain('cd site-dir')
+    expect(out).toContain('npm install')
+  })
+
+  it('fails cleanly without a name', async () => {
+    const { code, err } = await run(['startproject'], { cwd: tmpDir('sp') })
+    expect(code).toBe(2)
+    expect(err).toContain('the following arguments are required: name')
+  })
+})

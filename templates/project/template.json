@@ -1,0 +1,5 @@
+{
+  "when": {
+    "wrangler.jsonc": "cloudflare"
+  }
+}

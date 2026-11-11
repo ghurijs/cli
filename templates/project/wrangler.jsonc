@@ -1,0 +1,55 @@
+// Cloudflare Workers configuration — https://developers.cloudflare.com/workers/wrangler/configuration/
+// `ghuri` reads the bindings below (locally through wrangler's platform proxy, or remotely with --remote).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "{{pkgName}}",
+  "main": "src/index.ts",
+  // Pin the Workers runtime; bump it deliberately.
+  "compatibility_date": "{{compatibilityDate}}",
+  // Ghuri needs Node.js APIs on Workers (AsyncLocalStorage, Buffer, …).
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+{{#if d1}}
+  // D1 database used by d1('DB') in src/settings.ts.
+  // Local development (`ghuri runserver`, `ghuri migrate`) works with the placeholder id below.
+  // Before deploying, create the real database and paste the printed database_id here:
+  //   npx wrangler d1 create {{pkgName}}-db
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "{{pkgName}}-db",
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ],
+
+{{/if}}
+{{#if postgres}}
+  // Postgres on Workers goes through Hyperdrive: postgres({ hyperdrive: 'HYPERDRIVE' }) in src/settings.ts.
+  // Create a Hyperdrive config and uncomment (locally DATABASE_URL from .dev.vars is used instead):
+  //   npx wrangler hyperdrive create {{pkgName}}-db --connection-string="postgres://user:password@host:5432/{{pkgName}}"
+  // "hyperdrive": [
+  //   { "binding": "HYPERDRIVE", "id": "<hyperdrive id>" }
+  // ],
+
+{{/if}}
+  // R2 bucket for uploaded files: r2('MEDIA') in src/settings.ts.
+  // Create it before deploying:  npx wrangler r2 bucket create {{pkgName}}-media
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "{{pkgName}}-media"
+    }
+  ],
+
+  // Optional KV namespace for the cache: kvCache('CACHE') is used when the binding exists.
+  //   npx wrangler kv namespace create CACHE
+  // "kv_namespaces": [
+  //   { "binding": "CACHE", "id": "<namespace id>" }
+  // ],
+
+  // Plain-text variables. Secrets go in .dev.vars locally and `npx wrangler secret put SECRET_KEY` in production.
+  "vars": {
+    "DEBUG": "false"
+  }
+}

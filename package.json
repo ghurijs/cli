@@ -37,7 +37,9 @@
   "types": "./dist/index.d.ts",
   "files": [
     "dist",
+    "templates",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "engines": {
