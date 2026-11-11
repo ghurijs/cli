@@ -51,4 +51,6 @@ export {
   type StartProjectResult,
   startApp,
   startProject,
+  validateAppName,
+  validateProjectName,
 } from './scaffold'
