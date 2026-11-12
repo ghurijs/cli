@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-alpha.5
 
 - `startproject` adds `better-sqlite3` (`^13.1.0`) to the devDependencies of `d1` and `postgres` projects
   (`sqlite` projects already depend on it): `setupTestDatabase()` defaults to SQLite, so `ghuri test` failed in

@@ -55,10 +55,10 @@ describe('startProject (d1)', () => {
     // lags behind `next`, so the ranges must start at the current releases.
     expect(pkg.dependencies).toMatchObject({
       '@ghuri/admin': `^${GHURI_PACKAGE_VERSIONS['@ghuri/admin']}`,
-      '@ghuri/auth': '^0.1.0-alpha.4',
-      '@ghuri/core': '^0.1.0-alpha.1',
-      '@ghuri/orm': '^0.1.0-alpha.3',
-      '@ghuri/rest': '^0.1.0-alpha.1',
+      '@ghuri/auth': `^${GHURI_PACKAGE_VERSIONS['@ghuri/auth']}`,
+      '@ghuri/core': `^${GHURI_PACKAGE_VERSIONS['@ghuri/core']}`,
+      '@ghuri/orm': `^${GHURI_PACKAGE_VERSIONS['@ghuri/orm']}`,
+      '@ghuri/rest': `^${GHURI_PACKAGE_VERSIONS['@ghuri/rest']}`,
       '@ghuri/storage': `^${GHURI_PACKAGE_VERSIONS['@ghuri/storage']}`,
     })
     expect(pkg.dependencies['@ghuri/graphql']).toBeUndefined()
@@ -230,7 +230,7 @@ describe('startProject --graphql', () => {
     expect(r.graphql).toBe(true)
     expect(r.files).toContain('src/schema.ts')
     const pkg = JSON.parse(read(r.directory, 'package.json'))
-    expect(pkg.dependencies['@ghuri/graphql']).toBe('^0.1.0-alpha.1')
+    expect(pkg.dependencies['@ghuri/graphql']).toBe(`^${GHURI_PACKAGE_VERSIONS['@ghuri/graphql']}`)
     expect(pkg.dependencies.graphql).toBeTruthy()
     expect(pkg.devDependencies['better-sqlite3']).toBe('^13.1.0')
     const settings = read(r.directory, 'src/settings.ts')
