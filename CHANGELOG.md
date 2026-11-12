@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0-alpha.3
+
+- The `AGENTS.md` written by `startproject` covers social login (`@ghuri/socialauth`) and login strategies (`@ghuri/oauth`).
+
 ## 0.1.0-alpha.2
 
 - `ghuri mcp` runs project processes one at a time, so parallel tool calls no longer fail with "database is locked" from wrangler's local D1.

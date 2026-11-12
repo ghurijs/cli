@@ -1,6 +1,6 @@
 {
   "name": "@ghuri/cli",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "description": "The ghuri command-line tool: startproject, startapp, runserver, migrate and more",
   "type": "module",
   "license": "MIT",
