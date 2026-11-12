@@ -221,7 +221,7 @@ and `permissionRequired('shop.change_item')(view)` from `@ghuri/auth`.
 - **Ghuri MCP server** for coding agents: `{{exec}} ghuri mcp`, already registered in `.mcp.json` for Claude Code
   and other MCP clients. Prefer its tools over guessing when you need to know about this project or a Ghuri API:
   `project_info`, `list_apps`, `list_models`, `describe_model`, `list_routes`, `list_commands`,
-  `show_migrations`, `run_command` (makemigrations, migrate, test, check, …), `search_docs`, `get_doc`.
+  `show_migrations`, `openapi_schema` (the REST API's real shape), `run_command` (makemigrations, migrate, test, check, …), `search_docs`, `get_doc`.
   (This is separate from an `/mcp/` endpoint your app may serve with `@ghuri/agents`.)
 - **Ghuri skill / plugin**: in Claude Code, `/plugin marketplace add ghurijs/ghuri` then
   `/plugin install ghuri@ghuri`; for other agents, `npx skills add ghurijs/ghuri`.
