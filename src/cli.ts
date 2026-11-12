@@ -1,5 +1,5 @@
 import { spawn as nodeSpawn } from 'node:child_process'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { commandRegistry as cliCommandRegistry } from '@ghuri/core'
 import { closest, parseArgv, parseOptionFlags, UsageError } from './argv'
 import { BUILTIN_COMMANDS } from './commands/index'
@@ -169,6 +169,11 @@ class Cli implements CliContext {
       if (isNotFound(err, specifier)) return
       throw err
     }
+    // Load migration files (`src/<app>/migrations/*.ts`) with the project's TypeScript loader, so they work
+    // on every Node version and share module instances with the project (one @ghuri/orm).
+    if (typeof mod?.setMigrationImporter === 'function') {
+      mod.setMigrationImporter((file: string) => project.jiti.import(file))
+    }
     this.ormNames = await registerModuleCommands(mod ?? {}, project.core.commandRegistry)
   }
 
@@ -211,7 +216,7 @@ class Cli implements CliContext {
     const bin = join(PACKAGE_ROOT, 'dist', 'bin.js')
     const globals: string[] = []
     if (this.globals.settings) globals.push('--settings', this.globals.settings)
-    if (this.globals.persistTo) globals.push('--persist-to', this.globals.persistTo)
+    if (this.globals.persistTo) globals.push('--persist-to', resolve(this.cwd, this.globals.persistTo))
     return this.spawn(process.execPath, [bin, ...args, ...globals], { cwd: this.cwd })
   }
 

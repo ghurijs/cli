@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Migration files are imported with the project's TypeScript loader (jiti) through `setMigrationImporter()`.
+- `--persist-to <dir>` and the default state directory now match `wrangler dev` (`<dir>/v3`, `.wrangler/state/v3` next to the wrangler config, absolute paths), so CLI commands and `wrangler dev` share local D1/R2/KV data from any working directory.
+- Generated `vitest.config.ts` enables oxc legacy decorators so `@action`, `@admin.register`, `@display` and `@tool` work in tests; longer test timeouts for D1/PGlite.
+- The typecheck test no longer tolerates missing `@ghuri/*` modules: generated projects typecheck strictly against the real packages.
+
 ## 0.1.0-alpha.0
 
 - `ghuri` binary and programmatic `runCli(argv, options)`.

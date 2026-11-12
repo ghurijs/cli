@@ -108,7 +108,7 @@ describe('locateProject / loadProject', () => {
       {
         configPath: join(dir, 'wrangler.jsonc'),
         environment: undefined,
-        persist: true,
+        persist: { path: join(dir, '.wrangler', 'state', 'v3') },
         remoteBindings: false,
       },
     ])
@@ -142,7 +142,8 @@ describe('locateProject / loadProject', () => {
     })
     expect(seen.remoteBindings).toBe(true)
     expect(seen.environment).toBe('staging')
-    expect(seen.persist).toEqual({ path: '/tmp/state' })
+    // the same directory `wrangler dev --persist-to /tmp/state` uses
+    expect(seen.persist).toEqual({ path: '/tmp/state/v3' })
     expect(seen.configPath).not.toBe(join(dir, 'wrangler.jsonc'))
     expect(tmpContent.d1_databases[0].remote).toBe(true)
     expect(tmpContent.r2_buckets[0].remote).toBe(true)

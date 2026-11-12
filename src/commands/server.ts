@@ -1,3 +1,4 @@
+import { resolve } from 'node:path'
 import type { ArgumentParser, CommandIO } from '@ghuri/core'
 import { findBin, findWranglerConfig } from '../paths'
 import { BuiltinCommand, CommandError } from './base'
@@ -52,7 +53,8 @@ export class RunServerCommand extends BuiltinCommand {
       if (host) wargs.push('--ip', host)
       if (args.remote) wargs.push('--remote')
       if (this.cli.globals.env) wargs.push('--env', this.cli.globals.env)
-      if (this.cli.globals.persistTo) wargs.push('--persist-to', this.cli.globals.persistTo)
+      if (this.cli.globals.persistTo)
+        wargs.push('--persist-to', resolve(this.cli.cwd, this.cli.globals.persistTo))
       wargs.push(...extra)
       return this.cli.spawn(process.execPath, [wranglerBin(root), ...wargs], { cwd: root })
     }

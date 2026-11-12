@@ -21,7 +21,10 @@ package script: `npm run ghuri -- …`) uses the project's own copy.
 1. **Finds the project**: walks up from the current directory to the nearest `package.json` with a
    `ghuri` key or a `src/settings.ts`. The settings module is `package.json#ghuri.settings`
    (default `src/settings.ts`), or `--settings <path>`.
-2. **Loads TypeScript** with [jiti](https://github.com/unjs/jiti) — no build step.
+2. **Loads TypeScript** with [jiti](https://github.com/unjs/jiti) — no build step. Migration files are loaded
+   the same way (`setMigrationImporter()` from `@ghuri/orm/commands`), and decorators (`@action`,
+   `@admin.register`, `@display`, `@tool`) work (jiti compiles them as legacy decorators, which every Ghuri
+   decorator supports; `wrangler` / esbuild compile them as standard ones).
 3. **Builds `env`**, in precedence order (high → low):
    - Worker **bindings** (D1, R2, KV, Hyperdrive, …) from `wrangler.jsonc` / `wrangler.json` /
      `wrangler.toml` through wrangler's `getPlatformProxy()` — **local** (Miniflare, state in
@@ -51,7 +54,7 @@ Run `ghuri help` for the full list (grouped by source, like `manage.py help`) an
 | `--settings <path>` | Settings module (default `package.json#ghuri.settings` or `src/settings.ts`) |
 | `--env <name>` | Wrangler environment for bindings / vars (`[env.<name>]`) |
 | `--remote` | Use remote D1 / R2 / KV bindings |
-| `--persist-to <dir>` | Local binding state directory (default `.wrangler/state`) |
+| `--persist-to <dir>` | Local binding state directory, same meaning as `wrangler dev --persist-to` (default `.wrangler/state` next to the wrangler config; Miniflare data lives in `<dir>/v3`) |
 | `--traceback` | Print full stack traces |
 | `--no-color` | Plain output (also honours `NO_COLOR`) |
 | `-h, --help` | Help |

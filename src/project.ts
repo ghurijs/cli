@@ -1,5 +1,5 @@
 import { existsSync, rmSync, writeFileSync } from 'node:fs'
-import { basename, dirname, join } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { createJiti, type Jiti } from 'jiti'
 import { loadEnvFiles } from './dotenv'
@@ -17,7 +17,10 @@ export interface ProjectOptions {
   environment?: string
   /** Use remote D1/R2/KV bindings through wrangler (`--remote`). */
   remote?: boolean
-  /** Where local binding state lives (`--persist-to`); defaults to wrangler's `.wrangler/state`. */
+  /**
+   * Where local binding state lives (`--persist-to`, like `wrangler dev --persist-to`), relative to `cwd`;
+   * defaults to wrangler's `.wrangler/state` next to the wrangler config.
+   */
   persistTo?: string
   /** Base environment (defaults to `process.env`). */
   processEnv?: Record<string, string | undefined>
@@ -122,7 +125,7 @@ export async function loadProject(opts: ProjectOptions): Promise<Project> {
         proxy = await getPlatformProxy({
           configPath,
           environment: opts.environment,
-          persist: opts.persistTo ? { path: opts.persistTo } : true,
+          persist: { path: localPersistPath(wranglerConfig, opts.cwd, opts.persistTo) },
           remoteBindings: !!opts.remote,
         })
       } catch (err) {
@@ -177,6 +180,16 @@ export async function loadProject(opts: ProjectOptions): Promise<Project> {
     },
   }
   return project
+}
+
+/**
+ * The Miniflare state directory `wrangler dev` uses: `<persistTo>/v3` (`--persist-to` resolved against the
+ * working directory), else `.wrangler/state/v3` next to the wrangler config. `getPlatformProxy({ persist })`
+ * takes that `v3` directory itself and resolves relative paths against `process.cwd()`, so pass it absolute.
+ */
+export function localPersistPath(wranglerConfig: string, cwd: string, persistTo?: string): string {
+  const base = persistTo ? resolve(cwd, persistTo) : join(dirname(wranglerConfig), '.wrangler', 'state')
+  return join(base, 'v3')
 }
 
 export function isNotFound(err: unknown, specifier?: string): boolean {

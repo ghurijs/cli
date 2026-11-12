@@ -34,7 +34,9 @@ describe('help', () => {
     const dir = copyFixture('basic')
     const { code, out } = await run(['help'], { cwd: dir, ormCommandsModule: fakeOrm })
     expect(code).toBe(0)
-    expect(out).toMatch(/\[orm\]\n {4}fakemigrate\s+Pretends to apply migrations\n {4}showfakemigrations/)
+    expect(out).toMatch(
+      /\[orm\]\n {4}fakemigrate\s+Pretends to apply migrations\n {4}importmigration\b.*\n {4}showfakemigrations/,
+    )
     expect(out).toMatch(/\[demo\]\n {4}hello\s+Says hello from the fixture app/)
     expect(out.indexOf('[ghuri]')).toBeLessThan(out.indexOf('[orm]'))
     expect(out.indexOf('[orm]')).toBeLessThan(out.indexOf('[demo]'))
@@ -123,6 +125,21 @@ describe('running project commands', () => {
     })
     expect(code).toBe(0)
     expect(out).toBe('migrating blog on pg\n')
+  })
+
+  it('installs its TypeScript loader as the migration importer', async () => {
+    const dir = copyFixture('basic')
+    const { writeFileSync } = await import('node:fs')
+    const file = join(dir, 'src', '0001_initial.ts')
+    // TypeScript-only syntax (enum, parameter property) that plain `import()` can't strip
+    writeFileSync(
+      file,
+      'enum Kind { Initial = 1 }\nclass M { constructor(public name: string, public kind = Kind.Initial) {} }\nexport default new M("0001_initial")\n',
+    )
+    const { code, out, err } = await run(['importmigration', file], { cwd: dir, ormCommandsModule: fakeOrm })
+    expect(err).toBe('')
+    expect(code).toBe(0)
+    expect(out).toBe('imported 0001_initial\n')
   })
 
   it('works when @ghuri/orm/commands provides no commands yet', async () => {
@@ -319,5 +336,8 @@ describe('real wrangler bindings', () => {
     expect(r.err).toBe('')
     expect(r.code).toBe(0)
     expect(r.out).toBe("[ 'function', 'function', 'hello', 'true', true, 1 ]\n")
+    // wrangler dev --persist-to <dir> keeps Miniflare state in <dir>/v3: the CLI must share it
+    const { existsSync } = await import('node:fs')
+    expect(existsSync(join(dir, '.state', 'v3', 'd1'))).toBe(true)
   })
 })
