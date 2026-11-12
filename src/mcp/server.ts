@@ -8,12 +8,20 @@ import type { GlobalOptions } from '../context'
 import { cliVersion, findPackageDir, findProjectRoot, PACKAGE_ROOT } from '../paths'
 import { DOCS_URL, DocsIndex } from './docs'
 import { type McpTool, ToolError, type ToolOutput } from './protocol'
-import type { ModelDescription, ProjectSnapshot, WorkerOp, WorkerRequest, WorkerResponse } from './worker'
+import type {
+  ModelDescription,
+  OpenAPIResult,
+  ProjectSnapshot,
+  WorkerOp,
+  WorkerRequest,
+  WorkerResponse,
+} from './worker'
 
 export const MCP_INSTRUCTIONS = `This server is connected to a Ghuri project. Ghuri is "Django for TypeScript": settings.ts with INSTALLED_APPS, apps with models, migrations, urls.ts, class-based views, an admin and a REST framework, built on Hono and Drizzle; it runs on Cloudflare Workers (D1/R2/KV) by default and on Node with Postgres. It is TypeScript, not Python: options and methods are camelCase (maxLength, orderBy), settings keys are UPPER_SNAKE, and database calls are async.
 
 Use these tools to check the real project before editing code instead of guessing:
 - project_info, list_apps, list_models, describe_model, list_routes and list_commands read the current project (they reload it after every file change).
+- openapi_schema shows the REST API as OpenAPI (one line per operation; pass path or tag for the full request/response schemas) before you write a client or change a serializer.
 - After adding or changing models, run run_command with command "makemigrations", then "migrate" (local database only), and check with show_migrations.
 - run_command runs any other ghuri management command (check, test, startapp, sqlmigrate, dumpdata, app commands); runserver, shell, deploy, flush and --remote are not available here.
 - search_docs and get_doc read the Ghuri documentation (https://ghurijs.github.io/docs/llms-full.txt). Only use APIs that the docs or the project's own code show exist; do not assume a Django or DRF feature exists in Ghuri.`
@@ -212,7 +220,7 @@ function strList(v: unknown, name: string): string[] {
 /** The project side of the MCP server: runs workers, caches the snapshot per source fingerprint. */
 export class ProjectBridge {
   readonly cliCommand: string[]
-  private cache?: { fingerprint: string; snapshot: Promise<ProjectSnapshot> }
+  private cache = new Map<WorkerOp, { fingerprint: string; result: Promise<unknown> }>()
   readonly docs: DocsIndex
 
   constructor(readonly opts: McpServerOptions) {
@@ -276,24 +284,37 @@ export class ProjectBridge {
     )
   }
 
-  /** Settings, apps, models, routes and commands: reloaded when any project source file changed. */
-  snapshot(signal?: AbortSignal): Promise<ProjectSnapshot> {
+  /** A worker op's result, cached until any project source file changes. */
+  private cached<T>(op: WorkerOp, signal?: AbortSignal): Promise<T> {
     const root = this.root()
     const fingerprint = projectFingerprint(root)
-    if (fingerprint && this.cache?.fingerprint === fingerprint) return this.cache.snapshot
-    const snapshot = this.worker('snapshot', {}, signal) as Promise<ProjectSnapshot>
+    const hit = this.cache.get(op)
+    if (fingerprint && hit?.fingerprint === fingerprint) return hit.result as Promise<T>
+    const result = this.worker(op, {}, signal)
     if (fingerprint) {
-      const entry = { fingerprint, snapshot }
-      this.cache = entry
-      snapshot.catch(() => {
-        if (this.cache === entry) this.cache = undefined
+      const entry = { fingerprint, result }
+      this.cache.set(op, entry)
+      result.catch(() => {
+        if (this.cache.get(op) === entry) this.cache.delete(op)
       })
     }
-    return snapshot
+    return result as Promise<T>
+  }
+
+  /** Settings, apps, models, routes and commands: reloaded when any project source file changed. */
+  snapshot(signal?: AbortSignal): Promise<ProjectSnapshot> {
+    return this.cached<ProjectSnapshot>('snapshot', signal)
+  }
+
+  /** The project's OpenAPI document (as `ghuri generateschema` builds it), cached like the snapshot. */
+  async openapi(signal?: AbortSignal): Promise<OpenAPIDocument> {
+    const res = await this.cached<OpenAPIResult>('openapi_schema', signal)
+    if ('unavailable' in res) throw new ToolError(res.unavailable)
+    return JSON.parse(res.json) as OpenAPIDocument
   }
 
   invalidate(): void {
-    this.cache = undefined
+    this.cache.clear()
   }
 
   async runCommand(command: string, args: string[], timeoutMs: number, signal?: AbortSignal) {
@@ -324,6 +345,115 @@ export class ProjectBridge {
 function projectErrorText(error: { name: string; message: string; stack?: string }): string {
   const name = error.name && !['Error', 'ProjectError'].includes(error.name) ? `${error.name}: ` : ''
   return `The project could not be loaded: ${name}${error.message}\n\nFix the error and call the tool again (the project is reloaded on every call).`
+}
+
+type OpenAPIDocument = Record<string, any>
+
+const HTTP_METHODS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace']
+const MAX_SCHEMA = 40_000
+
+/** Every operation of an OpenAPI document, in document order. */
+export function openapiOperations(
+  doc: OpenAPIDocument,
+): Array<{ method: string; path: string; operation: Record<string, any> }> {
+  const out: Array<{ method: string; path: string; operation: Record<string, any> }> = []
+  for (const [path, item] of Object.entries((doc.paths ?? {}) as Record<string, any>)) {
+    for (const method of HTTP_METHODS) {
+      if (item?.[method]) out.push({ method: method.toUpperCase(), path, operation: item[method] })
+    }
+  }
+  return out
+}
+
+/** The `#/components/<kind>/<name>` refs reachable from `value`, following refs into `components`. */
+function referencedComponents(value: unknown, components: Record<string, any>): Map<string, Set<string>> {
+  const found = new Map<string, Set<string>>()
+  const walk = (v: unknown): void => {
+    if (Array.isArray(v)) {
+      for (const x of v) walk(x)
+      return
+    }
+    if (!v || typeof v !== 'object') return
+    for (const [k, x] of Object.entries(v)) {
+      if (k === '$ref' && typeof x === 'string') {
+        const m = /^#\/components\/([^/]+)\/(.+)$/.exec(x)
+        if (m) {
+          const names = found.get(m[1]) ?? new Set<string>()
+          found.set(m[1], names)
+          if (!names.has(m[2])) {
+            names.add(m[2])
+            walk(components[m[1]]?.[m[2]])
+          }
+        }
+      } else walk(x)
+    }
+  }
+  walk(value)
+  return found
+}
+
+/**
+ * `doc` narrowed to the operations under `path` (a prefix) and/or tagged `tag`, with only the components
+ * they reference. Undefined filters keep everything.
+ */
+export function filterOpenAPI(
+  doc: OpenAPIDocument,
+  filter: { path?: string; tag?: string },
+): OpenAPIDocument {
+  const prefix = filter.path ? `/${filter.path.replace(/^\//, '')}` : undefined
+  const tag = filter.tag?.toLowerCase()
+  if (!prefix && !tag) return doc
+  const paths: Record<string, any> = {}
+  for (const [p, item] of Object.entries((doc.paths ?? {}) as Record<string, any>)) {
+    if (prefix && !p.startsWith(prefix)) continue
+    const kept: Record<string, any> = {}
+    for (const [k, v] of Object.entries(item ?? {})) {
+      if (HTTP_METHODS.includes(k)) {
+        const tags = ((v as any)?.tags ?? []) as string[]
+        if (tag && !tags.some((t) => t.toLowerCase() === tag)) continue
+      }
+      kept[k] = v
+    }
+    if (Object.keys(kept).some((k) => HTTP_METHODS.includes(k))) paths[p] = kept
+  }
+  const allComponents = (doc.components ?? {}) as Record<string, any>
+  const components: Record<string, any> = {}
+  for (const [kind, names] of referencedComponents(paths, allComponents)) {
+    for (const name of [...names].sort()) {
+      if (allComponents[kind]?.[name] === undefined) continue
+      components[kind] ??= {}
+      components[kind][name] = allComponents[kind][name]
+    }
+  }
+  // Security schemes are referenced by name from `security`, not by $ref: keep them.
+  if (allComponents.securitySchemes) components.securitySchemes = allComponents.securitySchemes
+  const out: OpenAPIDocument = { ...doc, paths }
+  if (Object.keys(components).length) out.components = components
+  else delete out.components
+  return out
+}
+
+/** One line per operation: `GET /api/posts/ — listPosts: summary [tags]`. */
+export function openapiSummary(doc: OpenAPIDocument): string {
+  const ops = openapiOperations(doc)
+  const info = (doc.info ?? {}) as Record<string, unknown>
+  const head = `${info.title ?? 'API'}${info.version ? ` ${info.version}` : ''} (OpenAPI ${doc.openapi ?? '?'}): ${ops.length} operation${ops.length === 1 ? '' : 's'}`
+  const lines = ops.map(({ method, path, operation: op }) => {
+    const label = [op.operationId, op.summary ?? (op.description ? summaryLine(op.description) : undefined)]
+      .filter(Boolean)
+      .join(': ')
+    const tags = Array.isArray(op.tags) && op.tags.length ? ` [${op.tags.join(', ')}]` : ''
+    return `${method} ${path}${label ? ` — ${label}` : ''}${tags}`
+  })
+  const schemas = Object.keys(doc.components?.schemas ?? {})
+  const parts = [head, '', ...lines]
+  if (schemas.length) parts.push('', `Component schemas: ${schemas.join(', ')}`)
+  return parts.join('\n')
+}
+
+function summaryLine(s: string): string {
+  const first = String(s).trim().split('\n')[0]
+  return first.length > 120 ? `${first.slice(0, 117)}…` : first
 }
 
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
@@ -465,6 +595,63 @@ export function createTools(bridge: ProjectBridge): McpTool[] {
               ...(c.name in DENIED_COMMANDS ? { availableOverMcp: false } : {}),
             })),
           },
+        }
+      },
+    },
+    {
+      name: 'openapi_schema',
+      title: 'OpenAPI schema',
+      description:
+        "The project's REST API as OpenAPI 3.1 (what `ghuri generateschema` and the SchemaView serve), built from ROOT_URLCONF by @ghuri/rest. Without filters: one line per operation ('GET /api/posts/ — listPosts [posts]') plus the component schema names. With `path` and/or `tag` (or summary: false): the full JSON of those operations and the components they reference.",
+      inputSchema: {
+        type: 'object',
+        properties: {
+          path: {
+            type: 'string',
+            description: "Only operations whose path starts with this prefix, e.g. '/api/posts/'.",
+          },
+          tag: { type: 'string', description: "Only operations with this tag, e.g. 'posts'." },
+          summary: {
+            type: 'boolean',
+            description:
+              'true: one line per operation; false: the OpenAPI JSON. Default: true without path/tag, false with them.',
+          },
+        },
+        additionalProperties: false,
+      },
+      annotations: READ_ONLY,
+      async run(args, { signal }) {
+        const path = str(args.path, 'path')
+        const tag = str(args.tag, 'tag')
+        if (args.summary !== undefined && typeof args.summary !== 'boolean')
+          throw new ToolError("'summary' must be a boolean.")
+        const doc = await bridge.openapi(signal)
+        if (!openapiOperations(doc).length) {
+          throw new ToolError(
+            'The project has no REST API endpoints: ROOT_URLCONF routes no @ghuri/rest views (APIView, viewsets or a router). Use list_routes to see the URL patterns.',
+          )
+        }
+        const filtered = filterOpenAPI(doc, { path, tag })
+        if (!openapiOperations(filtered).length) {
+          const tags = [
+            ...new Set(openapiOperations(doc).flatMap(({ operation }) => operation.tags ?? [])),
+          ].sort()
+          throw new ToolError(
+            `No operations match ${[path && `path '${path}'`, tag && `tag '${tag}'`].filter(Boolean).join(' and ')}. ` +
+              `Tags: ${tags.join(', ') || '(none)'}. Call openapi_schema without filters to list every operation.`,
+          )
+        }
+        const summary = (args.summary as boolean | undefined) ?? (!path && !tag)
+        if (summary) {
+          const hint =
+            '\n\nPass path or tag (e.g. the path of one resource) to get the full schema of those operations.'
+          return { text: `${truncate(openapiSummary(filtered), MAX_SCHEMA).text}${path || tag ? '' : hint}` }
+        }
+        const out = truncate(JSON.stringify(filtered), MAX_SCHEMA)
+        return {
+          text: out.truncated
+            ? `${out.text}\n(output truncated: the middle is omitted, so this is not valid JSON; narrow it with path or tag)`
+            : out.text,
         }
       },
     },

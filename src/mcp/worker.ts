@@ -13,7 +13,7 @@ import { cliVersion, readJson } from '../paths'
 import type { Project } from '../project'
 import { redact, toJson } from './json'
 
-export type WorkerOp = 'snapshot' | 'show_migrations'
+export type WorkerOp = 'snapshot' | 'show_migrations' | 'openapi_schema'
 
 export interface WorkerRequest {
   op: WorkerOp
@@ -37,6 +37,7 @@ export async function runWorkerOp(req: WorkerRequest, options: RunCliOptions = {
     const { project, ctx } = await cli.setup()
     if (req.op === 'snapshot') return await buildSnapshot(cli, project, ctx)
     if (req.op === 'show_migrations') return await migrationStatus(project, req.args ?? {})
+    if (req.op === 'openapi_schema') return await openapiSchema(project, ctx)
     throw new Error(`Unknown worker operation '${req.op}'.`)
   } finally {
     await Promise.race([cli.dispose().catch(() => {}), new Promise((r) => setTimeout(r, 5000).unref())])
@@ -367,4 +368,36 @@ async function migrationStatus(project: Project, args: Record<string, unknown>) 
   }))
   const unapplied = statuses.filter((s) => !s.applied).map((s) => `${s.app}.${s.name}`)
   return { database: using, apps, unapplied }
+}
+
+// ---- OpenAPI ------------------------------------------------------------------------------------
+
+/**
+ * What the `openapi_schema` worker op returns: the document as a JSON string (so the generic `toJson`
+ * depth limit never cuts a deeply nested schema), or why there is none.
+ */
+export type OpenAPIResult = { json: string } | { unavailable: string }
+
+/**
+ * The OpenAPI document `ghuri generateschema` would print: @ghuri/rest's `GenerateSchemaCommand`, which
+ * documents ROOT_URLCONF through the first routed `SchemaView` (its title, version, patterns and prefix).
+ */
+async function openapiSchema(project: Project, ctx: GhuriContext): Promise<OpenAPIResult> {
+  const rest = await project.tryImport<any>('@ghuri/rest')
+  if (
+    !rest ||
+    (typeof rest.GenerateSchemaCommand !== 'function' && typeof rest.generateSchema !== 'function')
+  ) {
+    return {
+      unavailable:
+        '@ghuri/rest is not installed in this project, so it has no REST API to describe. Install it with `npm install @ghuri/rest@next` and route a viewset or APIView.',
+    }
+  }
+  const urlconf = (ctx.settings as Record<string, unknown>).ROOT_URLCONF
+  if (!urlconf) return { unavailable: 'ROOT_URLCONF is not set, so there are no REST routes to describe.' }
+  const document =
+    typeof rest.GenerateSchemaCommand === 'function'
+      ? new rest.GenerateSchemaCommand().generate({})
+      : rest.generateSchema(urlconf)
+  return { json: JSON.stringify(document) }
 }

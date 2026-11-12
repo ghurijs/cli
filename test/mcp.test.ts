@@ -12,6 +12,7 @@ import {
   DENIED_COMMANDS,
   defaultCliCommand,
   deniedReason,
+  filterOpenAPI,
   ProjectBridge,
   serverInfo,
   truncate,
@@ -134,6 +135,7 @@ describe('protocol', () => {
         'list_commands',
         'list_models',
         'list_routes',
+        'openapi_schema',
         'project_info',
         'run_command',
         'search_docs',
@@ -365,6 +367,95 @@ describe('introspection tools', () => {
     const r = await client(dir).call('project_info')
     expect(r.isError).toBe(true)
     expect(r.text).toContain('settings exploded')
+  })
+})
+
+describe('openapi_schema', () => {
+  it('lists operations by default; path and tag return the JSON of those operations and their components', async () => {
+    const c = client(copyFixture('api'))
+    const all = await c.call('openapi_schema')
+    expect(all.isError).toBe(false)
+    const lines = all.text.split('\n')
+    expect(lines[0]).toBe('Library API 2.0.0 (OpenAPI 3.1.0): 9 operations')
+    expect(lines).toContain('GET /api/books/ — listBooks [books]')
+    expect(lines).toContain('GET /api/books/longest/ — longestBook [books]')
+    expect(lines).toContain('PATCH /api/books/{id}/ — partialUpdateBook [books]')
+    expect(lines).toContain('GET /api/authors/{id}/ — retrieveAuthor [authors]')
+    expect(all.text).not.toMatch(/POST \/api\/authors/) // read-only viewset
+    expect(all.text).not.toContain('/api/schema/')
+    expect(all.text).toMatch(/Component schemas: .*Author.*Book/)
+    expect(all.text).not.toContain('"paths"')
+
+    const authors = await c.call('openapi_schema', { path: '/api/authors/' })
+    expect(authors.isError).toBe(false)
+    const doc = JSON.parse(authors.text)
+    expect(doc.info).toEqual({ title: 'Library API', version: '2.0.0' })
+    expect(Object.keys(doc.paths)).toEqual(['/api/authors/', '/api/authors/{id}/'])
+    expect(doc.paths['/api/authors/'].get.operationId).toBe('listAuthors')
+    expect(Object.keys(doc.components.schemas).sort()).toEqual(['Author', 'ErrorDetail'])
+    // A path without the leading slash works too.
+    expect(
+      Object.keys(JSON.parse((await c.call('openapi_schema', { path: 'api/books/{id}' })).text).paths),
+    ).toEqual(['/api/books/{id}/'])
+
+    const books = await c.call('openapi_schema', { tag: 'Books', summary: true })
+    expect(books.text.split('\n')[0]).toBe('Library API 2.0.0 (OpenAPI 3.1.0): 7 operations')
+    expect(books.text).not.toContain('authors')
+    const full = JSON.parse((await c.call('openapi_schema', { summary: false })).text)
+    expect(Object.keys(full.paths)).toHaveLength(5)
+    expect(full.components.schemas.Book.properties.title).toMatchObject({ type: 'string', maxLength: 200 })
+
+    const none = await c.call('openapi_schema', { path: '/api/nothing/' })
+    expect(none.isError).toBe(true)
+    expect(none.text).toMatch(/No operations match path '\/api\/nothing\/'.*Tags: authors, books/)
+    expect((await c.call('openapi_schema', { summary: 'yes' })).isError).toBe(true)
+  })
+
+  it('reuses the document until a source file changes', async () => {
+    const dir = copyFixture('api')
+    const c = client(dir)
+    expect((await c.call('openapi_schema')).text).toContain('9 operations')
+    const settings = join(dir, 'src/settings.ts')
+    writeFileSync(
+      settings,
+      readFileSync(settings, 'utf8').replace("router.register('authors', AuthorViewSet)\n", ''),
+    )
+    expect((await c.call('openapi_schema')).text).toContain('7 operations')
+  })
+
+  it('is a tool error when the project routes no REST views', async () => {
+    const r = await client(copyFixture('models')).call('openapi_schema')
+    expect(r.isError).toBe(true)
+    expect(r.text).toMatch(/no REST API endpoints/)
+  })
+
+  it('filterOpenAPI keeps the components referenced transitively and the security schemes', () => {
+    const doc = {
+      openapi: '3.1.0',
+      info: { title: 'T', version: '1' },
+      paths: {
+        '/a/': { get: { tags: ['a'], responses: { 200: { $ref: '#/components/responses/A' } } } },
+        '/b/': { get: { tags: ['b'], responses: {} }, parameters: [] },
+      },
+      components: {
+        responses: { A: { content: { 'application/json': { schema: { $ref: '#/components/schemas/A' } } } } },
+        schemas: {
+          A: { properties: { b: { $ref: '#/components/schemas/B' } } },
+          B: { properties: { a: { $ref: '#/components/schemas/A' } } },
+          C: {},
+        },
+        securitySchemes: { session: { type: 'apiKey' } },
+      },
+    }
+    const a = filterOpenAPI(doc, { tag: 'a' })
+    expect(Object.keys(a.paths)).toEqual(['/a/'])
+    expect(Object.keys(a.components.schemas)).toEqual(['A', 'B'])
+    expect(Object.keys(a.components.responses)).toEqual(['A'])
+    expect(a.components.securitySchemes).toEqual({ session: { type: 'apiKey' } })
+    const b = filterOpenAPI(doc, { path: '/b' })
+    expect(b.paths).toEqual({ '/b/': doc.paths['/b/'] })
+    expect(b.components).toEqual({ securitySchemes: { session: { type: 'apiKey' } } })
+    expect(filterOpenAPI(doc, {})).toBe(doc)
   })
 })
 

@@ -103,6 +103,7 @@ real project (instead of guessing) and run management commands:
 | `list_models` | Every model (`app_label.ModelName`), its table and fields |
 | `describe_model` | One model: fields and options, relations (target, `onDelete`, `relatedName`), reverse relations, Meta, managers |
 | `list_routes` | URL patterns (like `ghuri routes`) |
+| `openapi_schema` | The REST API as OpenAPI 3.1 (like `ghuri generateschema`): one line per operation (`GET /api/posts/ — listPosts [posts]`), or the JSON of the operations under a `path` prefix or with a `tag`, plus the components they use |
 | `list_commands` | Every command, grouped like `ghuri help`; full usage of one command |
 | `show_migrations` | Applied / unapplied migrations per app on the local database |
 | `run_command` | Run a management command (`check`, `makemigrations`, `migrate`, `test`, `startapp`, app commands, …) and return its exit code and output |
