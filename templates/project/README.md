@@ -85,6 +85,19 @@ has a commented example.
 | `{{exec}} ghuri deploy` | Apply remote migrations and `wrangler deploy` |
 {{/if}}
 
+## Working with AI coding agents
+
+Ghuri is new, so coding agents tend to write Django, Prisma or plain Hono code instead. This project ships with:
+
+- `AGENTS.md` — project instructions and a Ghuri API cheat-sheet, read by Codex, Cursor, Copilot, Gemini CLI and
+  others; `CLAUDE.md` imports it for Claude Code.
+- `.mcp.json` — registers the Ghuri MCP server (`{{exec}} ghuri mcp`) so Claude Code and other MCP clients can
+  inspect the project.
+- The Ghuri skill: `/plugin marketplace add ghurijs/ghuri` then `/plugin install ghuri@ghuri` in Claude Code, or
+  `npx skills add ghurijs/ghuri` for other agents.
+- Docs for LLMs: [llms.txt](https://ghurijs.github.io/docs/llms.txt) and
+  [llms-full.txt](https://ghurijs.github.io/docs/llms-full.txt).
+
 {{#if cloudflare}}
 ## Deploying to Cloudflare
 

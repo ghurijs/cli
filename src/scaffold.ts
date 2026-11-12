@@ -141,6 +141,8 @@ export function projectTemplateVars(opts: {
 }): Record<string, string | boolean> {
   const pkgName = opts.name.toLowerCase().replace(/_/g, '-')
   const pm = pmCommands(opts.pm)
+  // `.mcp.json` runs the project's own `ghuri mcp` through the package manager (`npx`, `pnpm exec`, …).
+  const [mcpCommand, ...execArgs] = pm.exec.split(' ')
   return {
     name: opts.name,
     pkgName,
@@ -158,6 +160,8 @@ export function projectTemplateVars(opts: {
     install: pm.install,
     run: pm.run,
     exec: pm.exec,
+    mcpCommand,
+    mcpArgs: `[${[...execArgs, 'ghuri', 'mcp'].map((a) => JSON.stringify(a)).join(', ')}]`,
   }
 }
 

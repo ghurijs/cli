@@ -225,6 +225,17 @@ class Cli implements CliContext {
   }
 }
 
+/**
+ * A CLI context with project loading, setup and command discovery, without running a command (used by the
+ * `ghuri mcp` worker). Call `dispose()` when done (closes DB connections and the bindings proxy).
+ */
+export function createCliContext(
+  globals: GlobalOptions,
+  options: RunCliOptions = {},
+): CliContext & { dispose(): Promise<void> } {
+  return new Cli(globals, options)
+}
+
 function firstLine(err: unknown): string {
   return String((err as Error)?.message ?? err).split('\n')[0]
 }

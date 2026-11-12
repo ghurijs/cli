@@ -1,4 +1,5 @@
 import type { BuiltinCommandClass } from '../context'
+import { McpCommand } from './mcp'
 import {
   CheckCommand,
   DiffSettingsCommand,
@@ -11,6 +12,7 @@ import { StartAppCommand, StartProjectCommand } from './scaffold'
 import { DeployCommand, RunServerCommand, TestCommand } from './server'
 
 export { BuiltinCommand } from './base'
+export { McpCommand } from './mcp'
 export * from './project'
 export * from './scaffold'
 export * from './server'
@@ -21,6 +23,7 @@ export const BUILTIN_COMMANDS: Record<string, BuiltinCommandClass> = {
   deploy: DeployCommand,
   diffsettings: DiffSettingsCommand,
   help: HelpCommand,
+  mcp: McpCommand,
   routes: RoutesCommand,
   runserver: RunServerCommand,
   shell: ShellCommand,

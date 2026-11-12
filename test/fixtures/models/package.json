@@ -1,0 +1,8 @@
+{
+  "name": "fixture-models",
+  "private": true,
+  "type": "module",
+  "ghuri": {
+    "settings": "src/settings.ts"
+  }
+}

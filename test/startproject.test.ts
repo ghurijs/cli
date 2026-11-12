@@ -25,6 +25,9 @@ describe('startProject (d1)', () => {
         '.dev.vars',
         '.dev.vars.example',
         '.gitignore',
+        '.mcp.json',
+        'AGENTS.md',
+        'CLAUDE.md',
         'README.md',
         'package.json',
         'src/index.ts',
@@ -118,6 +121,7 @@ describe('startProject (d1)', () => {
     const readme = read(dir, 'README.md')
     expect(readme).toContain('## REST API and OpenAPI')
     expect(readme).toContain('npx ghuri generateschema --file openapi.yaml')
+    expect(read(dir, 'AGENTS.md')).toContain('npx ghuri generateschema --file openapi.yaml')
   })
 
   it('suggests next steps', () => {
@@ -129,6 +133,52 @@ describe('startProject (d1)', () => {
       'npx ghuri createsuperuser',
       'npm run dev',
     ])
+  })
+})
+
+describe('startProject AI agent files', () => {
+  it('renders AGENTS.md for the project, CLAUDE.md importing it and .mcp.json for npm', () => {
+    const r = startProject({ name: 'my_site', cwd: tmpDir('sp'), db: 'd1', pm: 'npm' })
+    const agents = read(r.directory, 'AGENTS.md')
+    expect(agents).toContain('# AGENTS.md — my_site')
+    expect(agents).toContain('Django for TypeScript')
+    expect(agents).toContain('npx ghuri makemigrations')
+    expect(agents).toContain('npx ghuri deploy')
+    expect(agents).toContain('npx ghuri mcp')
+    expect(agents).toContain('/plugin install ghuri@ghuri')
+    expect(agents).toContain('https://ghurijs.github.io/docs/llms-full.txt')
+    expect(agents).toContain('running here on Cloudflare Workers')
+    expect(agents).not.toContain('src/schema.ts')
+    expect(read(r.directory, 'CLAUDE.md').split('\n')[0]).toBe('@AGENTS.md')
+    expect(JSON.parse(read(r.directory, '.mcp.json'))).toEqual({
+      mcpServers: { ghuri: { command: 'npx', args: ['ghuri', 'mcp'] } },
+    })
+    expect(read(r.directory, 'README.md')).toContain('## Working with AI coding agents')
+    noPlaceholders(r.directory, ['AGENTS.md', 'CLAUDE.md', '.mcp.json', 'README.md'])
+  })
+
+  it('runs the MCP server through the chosen package manager', () => {
+    const cases = [
+      ['pnpm', 'pnpm', ['exec', 'ghuri', 'mcp']],
+      ['bun', 'bunx', ['ghuri', 'mcp']],
+      ['yarn', 'yarn', ['ghuri', 'mcp']],
+    ] as const
+    for (const [pm, command, args] of cases) {
+      const r = startProject({ name: 'x', cwd: tmpDir('sp'), pm })
+      expect(JSON.parse(read(r.directory, '.mcp.json')).mcpServers.ghuri, pm).toEqual({ command, args })
+    }
+  })
+
+  it('adapts AGENTS.md to Node (sqlite) and GraphQL projects', () => {
+    const lite = startProject({ name: 'lite', cwd: tmpDir('sp'), db: 'sqlite', pm: 'pnpm' })
+    const agents = read(lite.directory, 'AGENTS.md')
+    expect(agents).toContain('running here on Node.js')
+    expect(agents).toContain('pnpm exec ghuri test')
+    expect(agents).not.toContain('wrangler')
+    expect(agents).not.toContain('ghuri deploy')
+    noPlaceholders(lite.directory, ['AGENTS.md'])
+    const gql = startProject({ name: 'gql', cwd: tmpDir('sp'), pm: 'npm', graphql: true })
+    expect(read(gql.directory, 'AGENTS.md')).toContain('src/schema.ts')
   })
 })
 

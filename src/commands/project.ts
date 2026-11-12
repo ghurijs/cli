@@ -159,6 +159,17 @@ export interface RouteRow {
   view: string
 }
 
+/** URL patterns of the project's ROOT_URLCONF (used by `ghuri routes` and `ghuri mcp`). */
+export function collectRoutes(project: Project, ctx: GhuriContext): RouteRow[] {
+  const resolver = project.core.getResolver(ctx.settings.ROOT_URLCONF as any)
+  return resolver.routes.map((r: any) => ({
+    pattern: `/${r.pattern}`,
+    name: r.fullName ?? '',
+    methods: r.methods?.join(',') ?? (r.kind === 'app' ? '*' : 'ANY'),
+    view: r.kind === 'app' ? '(Hono app)' : r.view?.viewClass?.name || r.view?.name || '(anonymous)',
+  }))
+}
+
 export class RoutesCommand extends BuiltinCommand {
   static help = 'Lists URL patterns with their names, methods and views. Like django-extensions show_urls.'
   static project = 'setup' as const
@@ -169,13 +180,7 @@ export class RoutesCommand extends BuiltinCommand {
 
   async handle(args: Record<string, unknown>, io: CommandIO): Promise<number> {
     const { project, ctx } = await this.cli.setup()
-    const resolver = project.core.getResolver(ctx.settings.ROOT_URLCONF as any)
-    const rows: RouteRow[] = resolver.routes.map((r: any) => ({
-      pattern: `/${r.pattern}`,
-      name: r.fullName ?? '',
-      methods: r.methods?.join(',') ?? (r.kind === 'app' ? '*' : 'ANY'),
-      view: r.kind === 'app' ? '(Hono app)' : r.view?.viewClass?.name || r.view?.name || '(anonymous)',
-    }))
+    const rows = collectRoutes(project, ctx)
     if (args.format === 'json') {
       io.stdout(JSON.stringify(rows, null, 2))
       return 0

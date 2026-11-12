@@ -74,6 +74,7 @@ Run `ghuri help` for the full list (grouped by source, like `manage.py help`) an
 | `diffsettings [--all] [--show-secrets]` | Settings that differ from core defaults (secrets masked). |
 | `version [--short]` | CLI version plus the project's `@ghuri/*`, hono, wrangler and Node versions. `ghuri --version` prints just the CLI version. |
 | `help [subcommand]` | List commands / show one command's help. |
+| `mcp [--docs-url <url>]` | Run a [Model Context Protocol](https://modelcontextprotocol.io) server over stdio for AI coding agents. See [AI coding agents (MCP)](#ai-coding-agents-mcp). |
 
 ### From `@ghuri/orm` (`[orm]`)
 
@@ -88,6 +89,85 @@ module exports it, else registers a `commands` map or exported `XxxCommand` clas
 
 Every `AppConfig.commands` entry, e.g. `createsuperuser` and `changepassword` from `@ghuri/auth`.
 App commands can override built-ins (except `help`).
+
+## AI coding agents (MCP)
+
+`ghuri mcp` is a development-time [Model Context Protocol](https://modelcontextprotocol.io) server over
+stdio. Connect Claude Code, Codex, Cursor, VS Code or any MCP client to it and the agent can look at the
+real project (instead of guessing) and run management commands:
+
+| Tool | |
+|---|---|
+| `project_info` | Root, settings module, runtime (cloudflare/node), bindings, `DEBUG`, `INSTALLED_APPS`, `DATABASES` (engine/name), `STORAGES`, `CACHES`, `MIDDLEWARE`, other settings (secrets hidden), installed `@ghuri/*` versions |
+| `list_apps` | Installed apps: label, name, path, models, commands, migrations |
+| `list_models` | Every model (`app_label.ModelName`), its table and fields |
+| `describe_model` | One model: fields and options, relations (target, `onDelete`, `relatedName`), reverse relations, Meta, managers |
+| `list_routes` | URL patterns (like `ghuri routes`) |
+| `list_commands` | Every command, grouped like `ghuri help`; full usage of one command |
+| `show_migrations` | Applied / unapplied migrations per app on the local database |
+| `run_command` | Run a management command (`check`, `makemigrations`, `migrate`, `test`, `startapp`, app commands, …) and return its exit code and output |
+| `search_docs`, `get_doc` | Search and read the Ghuri docs ([llms-full.txt](https://ghurijs.github.io/docs/llms-full.txt)) |
+
+Every introspection call loads the project in a fresh child process (cached until a source file
+changes), so models, routes and settings the agent just edited are picked up, and a syntax error comes
+back as a tool error instead of stopping the server. Nothing but protocol messages is written to stdout;
+anything the project prints goes to stderr. `run_command` refuses `runserver`, `shell`, `dbshell`,
+`deploy`, `flush`, `startproject`, `mcp`, `createsuperuser` without `--no-input`, `test --watch` and
+`--remote` (agents never touch production bindings). Commands run without prompts and are killed after
+`timeoutSeconds` (default 300).
+
+Run the server from the project directory (`npx` then uses the project's own `@ghuri/cli`).
+New projects created with `ghuri startproject` already include a `.mcp.json`.
+
+**Claude Code**
+
+```bash
+claude mcp add ghuri -- npx ghuri mcp            # just you
+claude mcp add --scope project ghuri -- npx ghuri mcp   # writes .mcp.json for the team
+```
+
+or commit a `.mcp.json` at the project root:
+
+```json
+{
+  "mcpServers": {
+    "ghuri": { "command": "npx", "args": ["ghuri", "mcp"] }
+  }
+}
+```
+
+**Codex** (`~/.codex/config.toml`, or `.codex/config.toml` in a trusted project):
+
+```toml
+[mcp_servers.ghuri]
+command = "npx"
+args = ["ghuri", "mcp"]
+```
+
+**Cursor** (`.cursor/mcp.json` in the project, or `~/.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "ghuri": { "command": "npx", "args": ["ghuri", "mcp"] }
+  }
+}
+```
+
+**VS Code** (`.vscode/mcp.json`; note the `servers` key):
+
+```json
+{
+  "servers": {
+    "ghuri": { "type": "stdio", "command": "npx", "args": ["ghuri", "mcp"] }
+  }
+}
+```
+
+**Any other client**: command `npx`, arguments `ghuri mcp`, transport stdio, working directory the
+project root. Global options work as usual (`npx ghuri mcp --settings src/settings.ts --env staging`).
+`--docs-url <url or file>` (or `GHURI_DOCS_URL`) reads the docs from somewhere else, e.g. a local
+`llms-full.txt`.
 
 ## Writing a command
 
