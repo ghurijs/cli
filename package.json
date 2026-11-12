@@ -25,7 +25,7 @@
     "framework"
   ],
   "bin": {
-    "ghuri": "./dist/bin.js"
+    "ghuri": "dist/bin.js"
   },
   "exports": {
     ".": {
