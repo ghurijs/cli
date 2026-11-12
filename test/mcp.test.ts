@@ -450,6 +450,29 @@ describe('migrations and run_command', () => {
     }
   })
 
+  it('runs project processes one at a time when tool calls arrive in parallel', async () => {
+    // Each project process starts workerd on the same .wrangler/state; two at once hit "database is locked".
+    const dir = copyFixture('models')
+    const log = join(tmpDir('lock'), 'events.log')
+    const script = join(tmpDir('lock'), 'fake-cli.mjs')
+    writeFileSync(
+      script,
+      `import { appendFileSync } from 'node:fs'
+appendFileSync(${JSON.stringify(log)}, 'start\\n')
+setTimeout(() => { appendFileSync(${JSON.stringify(log)}, 'end\\n'); process.exit(0) }, 150)
+`,
+    )
+    const c = client(dir, { cliCommand: [process.execPath, script] })
+    await Promise.all([
+      c.call('run_command', { command: 'check' }),
+      c.call('show_migrations'),
+      c.call('project_info'),
+      c.call('run_command', { command: 'routes' }),
+    ])
+    const events = readFileSync(log, 'utf8').trim().split('\n')
+    expect(events).toEqual(['start', 'end', 'start', 'end', 'start', 'end', 'start', 'end'])
+  })
+
   it('truncates very long output, keeping head and tail', () => {
     const long = `HEAD${'x'.repeat(100_000)}TAIL`
     const t = truncate(long, 1000)

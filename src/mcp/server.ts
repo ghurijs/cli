@@ -236,16 +236,36 @@ export class ProjectBridge {
     return found.root
   }
 
+  /**
+   * One project process at a time: each one starts wrangler's local runtime (workerd) on the same
+   * `.wrangler/state` SQLite files, and two at once fail with "database is locked". MCP clients
+   * routinely send tool calls in parallel, so calls queue here instead.
+   */
+  private lock: Promise<unknown> = Promise.resolve()
+
+  private exclusive<T>(fn: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+    const run = this.lock.then(() => {
+      if (signal?.aborted) throw new ToolError('Cancelled.')
+      return fn()
+    })
+    this.lock = run.catch(() => undefined)
+    return run
+  }
+
   async worker(op: WorkerOp, args: Record<string, unknown> = {}, signal?: AbortSignal): Promise<unknown> {
     this.root()
     const req: WorkerRequest = { op, cwd: this.opts.cwd, globals: this.opts.globals, args }
-    const res = await runProcess([...this.cliCommand, '__mcp-worker', JSON.stringify(req)], {
-      cwd: this.opts.cwd,
-      env: this.env,
-      ipc: true,
-      timeoutMs: this.opts.workerTimeoutMs ?? 120_000,
+    const res = await this.exclusive(
+      () =>
+        runProcess([...this.cliCommand, '__mcp-worker', JSON.stringify(req)], {
+          cwd: this.opts.cwd,
+          env: this.env,
+          ipc: true,
+          timeoutMs: this.opts.workerTimeoutMs ?? 120_000,
+          signal,
+        }),
       signal,
-    })
+    )
     const output = `${res.stdout}${res.stderr}`.replace(ANSI, '').trim()
     if (output) this.opts.log?.(`${output}\n`)
     if (res.message?.ok) return res.message.result
@@ -284,17 +304,17 @@ export class ProjectBridge {
     if (g.settings && !has('--settings')) globals.push('--settings', g.settings)
     if (g.env && !has('--env')) globals.push('--env', g.env)
     if (g.persistTo && !has('--persist-to')) globals.push('--persist-to', g.persistTo)
-    const started = Date.now()
     try {
-      return {
-        ...(await runProcess([...this.cliCommand, command, ...args, ...globals], {
+      return await this.exclusive(async () => {
+        const started = Date.now()
+        const res = await runProcess([...this.cliCommand, command, ...args, ...globals], {
           cwd: this.opts.cwd,
           env: this.env,
           timeoutMs,
           signal,
-        })),
-        durationMs: Date.now() - started,
-      }
+        })
+        return { ...res, durationMs: Date.now() - started }
+      }, signal)
     } finally {
       this.invalidate()
     }
