@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { parseJsonc } from '../src/project'
 import { COMPATIBILITY_DATE, generateSecretKey, startProject } from '../src/scaffold'
+import { GHURI_PACKAGE_VERSIONS } from '../src/versions'
 import { cleanTmp, run, tmpDir } from './helpers'
 
 afterAll(cleanTmp)
@@ -50,21 +51,24 @@ describe('startProject (d1)', () => {
     expect(pkg.ghuri).toEqual({ settings: 'src/settings.ts' })
     for (const s of ['dev', 'deploy', 'migrate', 'makemigrations', 'test', 'ghuri'])
       expect(pkg.scripts[s]).toBeTruthy()
-    for (const d of [
-      '@ghuri/core',
-      '@ghuri/orm',
-      '@ghuri/auth',
-      '@ghuri/rest',
-      '@ghuri/admin',
-      '@ghuri/storage',
-    ]) {
-      // @ghuri/rest 0.1.0-alpha.1 adds RestFrameworkConfig, which the template installs.
-      expect(pkg.dependencies[d]).toBe(d === '@ghuri/rest' ? '^0.1.0-alpha.1' : '^0.1.0-alpha.0')
-    }
-    expect(pkg.devDependencies['@ghuri/cli']).toBe('^0.1.0-alpha.1')
+    // Minimum versions from src/versions.ts: npm installs `latest` when it satisfies the range, and `latest`
+    // lags behind `next`, so the ranges must start at the current releases.
+    expect(pkg.dependencies).toMatchObject({
+      '@ghuri/admin': `^${GHURI_PACKAGE_VERSIONS['@ghuri/admin']}`,
+      '@ghuri/auth': '^0.1.0-alpha.4',
+      '@ghuri/core': '^0.1.0-alpha.1',
+      '@ghuri/orm': '^0.1.0-alpha.3',
+      '@ghuri/rest': '^0.1.0-alpha.1',
+      '@ghuri/storage': `^${GHURI_PACKAGE_VERSIONS['@ghuri/storage']}`,
+    })
+    expect(pkg.dependencies['@ghuri/graphql']).toBeUndefined()
+    expect(pkg.devDependencies['@ghuri/cli']).toBe(`^${GHURI_PACKAGE_VERSIONS['@ghuri/cli']}`)
     for (const d of ['wrangler', 'typescript', 'vitest', '@cloudflare/workers-types', '@ghuri/cli']) {
       expect(pkg.devDependencies[d]).toBeTruthy()
     }
+    // setupTestDatabase() defaults to SQLite, so `ghuri test` needs better-sqlite3 in every project.
+    expect(pkg.devDependencies['better-sqlite3']).toBe('^13.1.0')
+    expect(pkg.dependencies['better-sqlite3']).toBeUndefined()
   })
 
   it('renders wrangler.jsonc with nodejs_compat and DB/MEDIA bindings', () => {
@@ -194,7 +198,10 @@ describe('startProject (postgres / sqlite)', () => {
     expect(settings).not.toContain('d1(')
     expect(read(r.directory, '.dev.vars')).toContain('DATABASE_URL=postgres://')
     expect(parseJsonc(read(r.directory, 'wrangler.jsonc')).d1_databases).toBeUndefined()
-    JSON.parse(read(r.directory, 'package.json'))
+    const pkg = JSON.parse(read(r.directory, 'package.json'))
+    // tests still run on SQLite by default (setupTestDatabase())
+    expect(pkg.devDependencies['better-sqlite3']).toBe('^13.1.0')
+    expect(pkg.dependencies['better-sqlite3']).toBeUndefined()
     expect(r.nextSteps).toContain('pnpm exec ghuri migrate')
     noPlaceholders(r.directory, r.files)
   })
@@ -205,7 +212,9 @@ describe('startProject (postgres / sqlite)', () => {
     const pkg = JSON.parse(read(r.directory, 'package.json'))
     expect(pkg.scripts.dev).toBe('ghuri runserver --node')
     expect(pkg.scripts.deploy).toBeUndefined()
-    expect(pkg.dependencies['better-sqlite3']).toBeTruthy()
+    // a runtime dependency here, which also covers tests: not repeated in devDependencies
+    expect(pkg.dependencies['better-sqlite3']).toBe('^13.1.0')
+    expect(pkg.devDependencies['better-sqlite3']).toBeUndefined()
     expect(pkg.devDependencies.wrangler).toBeUndefined()
     const settings = read(r.directory, 'src/settings.ts')
     expect(settings).toContain("import { sqlite } from '@ghuri/orm/sqlite'")
@@ -221,8 +230,9 @@ describe('startProject --graphql', () => {
     expect(r.graphql).toBe(true)
     expect(r.files).toContain('src/schema.ts')
     const pkg = JSON.parse(read(r.directory, 'package.json'))
-    expect(pkg.dependencies['@ghuri/graphql']).toBeTruthy()
+    expect(pkg.dependencies['@ghuri/graphql']).toBe('^0.1.0-alpha.1')
     expect(pkg.dependencies.graphql).toBeTruthy()
+    expect(pkg.devDependencies['better-sqlite3']).toBe('^13.1.0')
     const settings = read(r.directory, 'src/settings.ts')
     expect(settings).toContain("import { GraphQLConfig } from '@ghuri/graphql'")
     expect(settings).toMatch(/AdminConfig,\n {4}RestFrameworkConfig,\n {4}GraphQLConfig,\n {2}\]/)

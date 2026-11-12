@@ -230,6 +230,13 @@ the single place the generated code lives. Syntax: `{{var}}` substitution and
 `{{#if flag}}…{{else}}…{{/if}}` blocks (flags: `d1`, `postgres`, `sqlite`, `cloudflare`, `node`, `graphql`);
 files named `_x` are written as `.x`, `x.tpl` as `x`; `template.json` can skip files per flag.
 
+The `@ghuri/*` ranges in the generated `package.json` come from `src/versions.ts` (`GHURI_PACKAGE_VERSIONS`,
+rendered as `{{coreRange}}`, `{{ormRange}}`, …): each is `^` + the package's current release, because npm
+installs the `latest` dist-tag whenever it satisfies a range and `latest` can lag behind `next`. Bump an entry
+when releasing that package; `test/versions.test.ts` compares the map with `packages/*/package.json` when the
+sibling repos are checked out. Every project gets `better-sqlite3` (a devDependency for `d1` / `postgres`, a
+dependency for `sqlite`) because `setupTestDatabase()` defaults to SQLite.
+
 ## License
 
 MIT

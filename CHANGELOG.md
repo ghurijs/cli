@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- `startproject` adds `better-sqlite3` (`^13.1.0`) to the devDependencies of `d1` and `postgres` projects
+  (`sqlite` projects already depend on it): `setupTestDatabase()` defaults to SQLite, so `ghuri test` failed in
+  new projects with "Cannot find package 'better-sqlite3'".
+- `startproject` writes `@ghuri/*` ranges from one versions map (`src/versions.ts`, exported as
+  `GHURI_PACKAGE_VERSIONS` / `ghuriRange()`) instead of hard-coded `^0.1.0-alpha.0` ranges, which let npm install
+  the stale `latest` releases. New projects now start at `@ghuri/core ^0.1.0-alpha.1`, `@ghuri/orm ^0.1.0-alpha.3`,
+  `@ghuri/auth ^0.1.0-alpha.4`, `@ghuri/graphql ^0.1.0-alpha.1`, `@ghuri/rest ^0.1.0-alpha.1`,
+  `@ghuri/cli ^0.1.0-alpha.4`, `@ghuri/admin` / `@ghuri/storage ^0.1.0-alpha.0`. A test keeps the map in sync with
+  the workspace's `packages/*/package.json`.
+
 ## 0.1.0-alpha.4
 
 - `ghuri mcp`: new read-only `openapi_schema` tool: the project's OpenAPI document (via `@ghuri/rest` `generateschema`), as a list of operations by default or JSON filtered by `path` prefix or `tag`.
