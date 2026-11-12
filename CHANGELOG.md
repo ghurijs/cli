@@ -1,7 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-alpha.1
 
+- `ghuri mcp`: a Model Context Protocol server over stdio for AI coding agents (Claude Code, Codex, Cursor, VS Code) with `project_info`, `list_apps`, `list_models`, `describe_model`, `list_routes`, `list_commands`, `show_migrations`, `run_command`, `search_docs` and `get_doc`.
+- `startproject` writes `AGENTS.md`, `CLAUDE.md` (importing it) and `.mcp.json` (runs `ghuri mcp` through the chosen package manager).
 - `startproject` routes the OpenAPI schema (`api/schema/`), Swagger UI (`api/docs/`) and Scalar (`api/reference/`), adds `RestFrameworkConfig` (the `generateschema` command) to `INSTALLED_APPS`, and documents both in the project README.
 - `startproject --graphql` adds `@ghuri/graphql` + `graphql` to the dependencies, `GraphQLConfig` to `INSTALLED_APPS`, `src/schema.ts` (`GRAPHQL.SCHEMA`) and `GraphQLView` at `/graphql/`; the project README explains how to add GraphQL later otherwise. `startapp` writes a commented `schema.ts` (`ModelType` with Relay filters / ordering, `Query`, `SerializerMutation`, `ModelMutation`). `graphql` is a reserved app name. The strict typecheck test covers a `--graphql` project with the app schema uncommented.
 - Migration files are imported with the project's TypeScript loader (jiti) through `setMigrationImporter()`.

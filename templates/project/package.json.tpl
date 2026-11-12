@@ -29,7 +29,7 @@
     "@ghuri/graphql": "^0.1.0-alpha.0",
 {{/if}}
     "@ghuri/orm": "^0.1.0-alpha.0",
-    "@ghuri/rest": "^0.1.0-alpha.0",
+    "@ghuri/rest": "^0.1.0-alpha.1",
     "@ghuri/storage": "^0.1.0-alpha.0",
     "@hono/node-server": "^2.1.0",
 {{#if sqlite}}
@@ -46,7 +46,7 @@
 {{#if cloudflare}}
     "@cloudflare/workers-types": "^5.20261110.0",
 {{/if}}
-    "@ghuri/cli": "^0.1.0-alpha.0",
+    "@ghuri/cli": "^0.1.0-alpha.1",
     "@types/node": "^24.0.0",
     "typescript": "~5.9.3",
 {{#if cloudflare}}

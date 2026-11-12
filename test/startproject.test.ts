@@ -58,8 +58,10 @@ describe('startProject (d1)', () => {
       '@ghuri/admin',
       '@ghuri/storage',
     ]) {
-      expect(pkg.dependencies[d]).toBe('^0.1.0-alpha.0')
+      // @ghuri/rest 0.1.0-alpha.1 adds RestFrameworkConfig, which the template installs.
+      expect(pkg.dependencies[d]).toBe(d === '@ghuri/rest' ? '^0.1.0-alpha.1' : '^0.1.0-alpha.0')
     }
+    expect(pkg.devDependencies['@ghuri/cli']).toBe('^0.1.0-alpha.1')
     for (const d of ['wrangler', 'typescript', 'vitest', '@cloudflare/workers-types', '@ghuri/cli']) {
       expect(pkg.devDependencies[d]).toBeTruthy()
     }
