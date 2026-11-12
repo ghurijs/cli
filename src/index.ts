@@ -54,3 +54,4 @@ export {
   validateAppName,
   validateProjectName,
 } from './scaffold'
+export { GHURI_PACKAGE_VERSIONS, type GhuriPackageName, ghuriRange } from './versions'

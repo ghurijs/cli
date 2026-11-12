@@ -22,15 +22,15 @@
     "ghuri": "ghuri"
   },
   "dependencies": {
-    "@ghuri/admin": "^0.1.0-alpha.0",
-    "@ghuri/auth": "^0.1.0-alpha.0",
-    "@ghuri/core": "^0.1.0-alpha.0",
+    "@ghuri/admin": "{{adminRange}}",
+    "@ghuri/auth": "{{authRange}}",
+    "@ghuri/core": "{{coreRange}}",
 {{#if graphql}}
-    "@ghuri/graphql": "^0.1.0-alpha.0",
+    "@ghuri/graphql": "{{graphqlRange}}",
 {{/if}}
-    "@ghuri/orm": "^0.1.0-alpha.0",
-    "@ghuri/rest": "^0.1.0-alpha.1",
-    "@ghuri/storage": "^0.1.0-alpha.0",
+    "@ghuri/orm": "{{ormRange}}",
+    "@ghuri/rest": "{{restRange}}",
+    "@ghuri/storage": "{{storageRange}}",
     "@hono/node-server": "^2.1.0",
 {{#if sqlite}}
     "better-sqlite3": "^13.1.0",
@@ -46,8 +46,11 @@
 {{#if cloudflare}}
     "@cloudflare/workers-types": "^5.20261110.0",
 {{/if}}
-    "@ghuri/cli": "^0.1.0-alpha.1",
+    "@ghuri/cli": "{{cliRange}}",
     "@types/node": "^24.0.0",
+{{#if !sqlite}}
+    "better-sqlite3": "^13.1.0",
+{{/if}}
     "typescript": "~5.9.3",
 {{#if cloudflare}}
     "vitest": "^5.1.0",

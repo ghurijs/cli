@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { findProjectRoot, TEMPLATES_DIR } from './paths'
 import { type RenderedFile, renderTemplate, TemplateError, writeFiles } from './render'
+import { ghuriRangeVars } from './versions'
 
 export const DATABASES = ['d1', 'postgres', 'sqlite'] as const
 export type DatabaseChoice = (typeof DATABASES)[number]
@@ -162,6 +163,8 @@ export function projectTemplateVars(opts: {
     exec: pm.exec,
     mcpCommand,
     mcpArgs: `[${[...execArgs, 'ghuri', 'mcp'].map((a) => JSON.stringify(a)).join(', ')}]`,
+    // `{{coreRange}}`, `{{ormRange}}`, … in package.json: minimum versions from src/versions.ts.
+    ...ghuriRangeVars(),
   }
 }
 
