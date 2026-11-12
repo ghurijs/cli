@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.0-alpha.2
+
+- `ghuri mcp` runs project processes one at a time, so parallel tool calls no longer fail with "database is locked" from wrangler's local D1.
+
 ## 0.1.0-alpha.1
 
 - `ghuri mcp`: a Model Context Protocol server over stdio for AI coding agents (Claude Code, Codex, Cursor, VS Code) with `project_info`, `list_apps`, `list_models`, `describe_model`, `list_routes`, `list_commands`, `show_migrations`, `run_command`, `search_docs` and `get_doc`.
