@@ -133,6 +133,43 @@ describe('startProject (postgres / sqlite)', () => {
   })
 })
 
+describe('startProject --graphql', () => {
+  it('adds @ghuri/graphql, GraphQLConfig, src/schema.ts and the /graphql/ route', () => {
+    const r = startProject({ name: 'gql', cwd: tmpDir('sp'), db: 'd1', pm: 'npm', graphql: true })
+    expect(r.graphql).toBe(true)
+    expect(r.files).toContain('src/schema.ts')
+    const pkg = JSON.parse(read(r.directory, 'package.json'))
+    expect(pkg.dependencies['@ghuri/graphql']).toBeTruthy()
+    expect(pkg.dependencies.graphql).toBeTruthy()
+    const settings = read(r.directory, 'src/settings.ts')
+    expect(settings).toContain("import { GraphQLConfig } from '@ghuri/graphql'")
+    expect(settings).toMatch(/AdminConfig,\n {4}GraphQLConfig,\n {2}\]/)
+    expect(settings).toContain('SCHEMA: schema')
+    expect(read(r.directory, 'src/urls.ts')).toContain(
+      "path('graphql/', GraphQLView.asView(), { name: 'graphql' })",
+    )
+    expect(read(r.directory, 'src/schema.ts')).toContain("'Hello from gql!'")
+    expect(read(r.directory, 'README.md')).toContain('GraphQL at /graphql/')
+    noPlaceholders(r.directory, r.files)
+  })
+
+  it('is off by default: no GraphQL dependency, files or settings', () => {
+    const r = startProject({ name: 'plain', cwd: tmpDir('sp'), pm: 'npm' })
+    expect(r.graphql).toBe(false)
+    expect(r.files).not.toContain('src/schema.ts')
+    expect(JSON.parse(read(r.directory, 'package.json')).dependencies['@ghuri/graphql']).toBeUndefined()
+    expect(read(r.directory, 'src/settings.ts')).not.toContain('graphql')
+    expect(read(r.directory, 'src/urls.ts')).not.toContain('graphql')
+  })
+
+  it('ghuri startproject --graphql', async () => {
+    const cwd = tmpDir('sp')
+    const { code } = await run(['startproject', 'site', '--graphql', '--no-install'], { cwd })
+    expect(code).toBe(0)
+    expect(existsSync(join(cwd, 'site', 'src', 'schema.ts'))).toBe(true)
+  })
+})
+
 describe('startProject errors', () => {
   it('rejects invalid names, unknown databases and non-empty directories', () => {
     const cwd = tmpDir('sp')

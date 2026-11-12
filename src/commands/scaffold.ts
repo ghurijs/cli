@@ -26,6 +26,9 @@ export class StartProjectCommand extends BuiltinCommand {
       .option('--pm <manager>', {
         help: `Package manager: ${PACKAGE_MANAGERS.join(' | ')} (default: the one running this command, else npm).`,
       })
+      .option('--graphql', {
+        help: 'Add GraphQL (@ghuri/graphql): GraphQLConfig, src/schema.ts and GraphQLView at /graphql/.',
+      })
       .option('--no-install', { help: "Don't install dependencies." })
   }
 
@@ -38,6 +41,7 @@ export class StartProjectCommand extends BuiltinCommand {
       cwd: this.cli.cwd,
       db: args.db as DatabaseChoice,
       pm,
+      graphql: args.graphql === true,
     })
     io.stdout(io.style.success(`Created Ghuri project '${args.name}' in ${result.directory}`))
     for (const f of result.files) io.stdout(`  ${f}`)

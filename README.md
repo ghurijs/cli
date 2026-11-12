@@ -63,8 +63,8 @@ Run `ghuri help` for the full list (grouped by source, like `manage.py help`) an
 
 | Command | Description |
 |---|---|
-| `startproject <name> [directory] [--db d1\|postgres\|sqlite] [--pm npm\|pnpm\|bun\|yarn] [--no-install]` | Create a project. `d1` (default): Cloudflare D1 + R2. `postgres`: Hyperdrive on Workers / `DATABASE_URL` elsewhere. `sqlite`: Node project (better-sqlite3, file storage, no wrangler). Generates a random `SECRET_KEY` into `.dev.vars`. Works outside a project. |
-| `startapp <name> [directory] [--no-register]` | Create `src/<name>/` (`app.ts`, `models.ts`, `views.ts`, `urls.ts`, `serializers.ts`, `admin.ts`, `tests.ts`, `migrations/index.ts`) and add the `AppConfig` to `INSTALLED_APPS` (import + list entry) when the settings file has the usual shape. |
+| `startproject <name> [directory] [--db d1\|postgres\|sqlite] [--pm npm\|pnpm\|bun\|yarn] [--graphql] [--no-install]` | Create a project. `d1` (default): Cloudflare D1 + R2. `postgres`: Hyperdrive on Workers / `DATABASE_URL` elsewhere. `sqlite`: Node project (better-sqlite3, file storage, no wrangler). `--graphql`: add `@ghuri/graphql` (`GraphQLConfig`, `src/schema.ts`, `GRAPHQL.SCHEMA`, `GraphQLView` at `/graphql/`). Generates a random `SECRET_KEY` into `.dev.vars`. Works outside a project. |
+| `startapp <name> [directory] [--no-register]` | Create `src/<name>/` (`app.ts`, `models.ts`, `views.ts`, `urls.ts`, `serializers.ts`, `schema.ts` (commented GraphQL example), `admin.ts`, `tests.ts`, `migrations/index.ts`) and add the `AppConfig` to `INSTALLED_APPS` (import + list entry) when the settings file has the usual shape. |
 | `runserver [addrport] [-p, --port <port>] [--host <host>] [--node] [--remote]` | `wrangler dev` (default for projects with a wrangler config; extra args are forwarded). `--node` (or no wrangler config) serves the app with `@ghuri/core/node` on port 8000, still using local wrangler bindings when available. |
 | `shell [-c, --command <code>]` | Node REPL with `apps`, `settings`, `env`, `core`, `orm`, `getModel()` and every model by class name; top-level `await` works. `-c` (or piped stdin) evaluates and prints the result. |
 | `check [--deploy] [-t, --tag <tag>] [--fail-level <level>] [--list-tags]` | Run system checks (`runChecks()` from `@ghuri/core`). |
@@ -146,7 +146,7 @@ processes), `getPlatformProxy` and `ormCommandsModule` (tests).
 
 `startproject` / `startapp` render the files in `templates/project` and `templates/app` — they are
 the single place the generated code lives. Syntax: `{{var}}` substitution and
-`{{#if flag}}…{{else}}…{{/if}}` blocks (flags: `d1`, `postgres`, `sqlite`, `cloudflare`, `node`);
+`{{#if flag}}…{{else}}…{{/if}}` blocks (flags: `d1`, `postgres`, `sqlite`, `cloudflare`, `node`, `graphql`);
 files named `_x` are written as `.x`, `x.tpl` as `x`; `template.json` can skip files per flag.
 
 ## License

@@ -61,6 +61,7 @@ const RESERVED_APP_NAMES = new Set([
   'rest',
   'storage',
   'agents',
+  'graphql',
   'test',
   'src',
 ])
@@ -117,6 +118,8 @@ export interface StartProjectOptions {
   pm?: PackageManager
   /** Fixed secret key (tests); random by default. */
   secretKey?: string
+  /** Add @ghuri/graphql: GraphQLConfig, src/schema.ts, GraphQLView at /graphql/. */
+  graphql?: boolean
 }
 
 export interface StartProjectResult {
@@ -124,6 +127,7 @@ export interface StartProjectResult {
   files: string[]
   db: DatabaseChoice
   pm: PackageManager
+  graphql: boolean
   /** Commands to show the user afterwards. */
   nextSteps: string[]
 }
@@ -133,6 +137,7 @@ export function projectTemplateVars(opts: {
   db: DatabaseChoice
   pm: PackageManager
   secretKey: string
+  graphql?: boolean
 }): Record<string, string | boolean> {
   const pkgName = opts.name.toLowerCase().replace(/_/g, '-')
   const pm = pmCommands(opts.pm)
@@ -148,6 +153,7 @@ export function projectTemplateVars(opts: {
     sqlite: opts.db === 'sqlite',
     cloudflare: opts.db !== 'sqlite',
     node: opts.db === 'sqlite',
+    graphql: !!opts.graphql,
     pm: opts.pm,
     install: pm.install,
     run: pm.run,
@@ -201,6 +207,7 @@ export function startProject(opts: StartProjectOptions): StartProjectResult {
     db,
     pm,
     secretKey: opts.secretKey ?? generateSecretKey(),
+    graphql: opts.graphql,
   })
   const files = renderProject(vars)
   try {
@@ -216,6 +223,7 @@ export function startProject(opts: StartProjectOptions): StartProjectResult {
     files: files.map((f) => f.path),
     db,
     pm,
+    graphql: !!opts.graphql,
     nextSteps: nextStepsFor({
       dirLabel: rel.includes(' ') ? JSON.stringify(rel) : rel,
       db,
@@ -255,6 +263,7 @@ export function appTemplateVars(name: string): Record<string, string> {
   return {
     name,
     className: `${pascalCase(name)}Config`,
+    pascalName: pascalCase(name),
     verboseName: titleCase(name),
     camelName: camelCaseName(name),
   }

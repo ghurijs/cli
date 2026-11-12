@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { findPackageDir } from '../src/paths'
@@ -7,6 +7,16 @@ import { startApp, startProject } from '../src/scaffold'
 import { cleanTmp, tmpDir } from './helpers'
 
 afterAll(cleanTmp)
+
+/** The commented example code of a template file (after its leading prose comment). */
+function uncomment(src: string): string {
+  const lines = src.split('\n')
+  const start = lines.findIndex((l) => l.startsWith('// import '))
+  return lines
+    .slice(start)
+    .map((l) => l.replace(/^\/\/ ?/, ''))
+    .join('\n')
+}
 
 function tsc(dir: string): string[] {
   const bin = join(findPackageDir('typescript', dir)!, 'bin', 'tsc')
@@ -30,6 +40,41 @@ describe('generated code typechecks (tsc --noEmit)', () => {
       expect(errors).toEqual([])
     })
   }
+
+  it('startproject --graphql + startapp blog with its schema.ts uncommented', () => {
+    const dir = startProject({ name: 'site', cwd: tmpDir('tsc-graphql'), db: 'd1', graphql: true }).directory
+    startApp({ name: 'blog', cwd: dir })
+    const app = join(dir, 'src', 'blog')
+    writeFileSync(
+      join(app, 'models.ts'),
+      `import { CharField, DateTimeField, type Manager, Model, TextField } from '@ghuri/orm'
+export class Post extends Model({
+  title: new CharField({ maxLength: 200 }),
+  body: new TextField({ blank: true }),
+  createdAt: new DateTimeField({ autoNowAdd: true }),
+}) {
+  declare static objects: Manager<Post>
+}
+`,
+    )
+    writeFileSync(
+      join(app, 'serializers.ts'),
+      uncomment(readFileSync(join(app, 'serializers.ts'), 'utf8')).replace('export {}\n', ''),
+    )
+    writeFileSync(join(app, 'schema.ts'), uncomment(readFileSync(join(app, 'schema.ts'), 'utf8')))
+    const schema = join(dir, 'src', 'schema.ts')
+    writeFileSync(
+      schema,
+      readFileSync(schema, 'utf8')
+        .replace(
+          "from '@ghuri/graphql'",
+          "from '@ghuri/graphql'\nimport { BlogMutation, BlogQuery } from './blog/schema'",
+        )
+        .replace('query: [ProjectQuery]', 'query: [ProjectQuery, BlogQuery], mutation: [BlogMutation]'),
+    )
+    expect(readFileSync(schema, 'utf8')).toContain('BlogQuery]')
+    expect(tsc(dir)).toEqual([])
+  })
 
   it('uncommented app code with decorators (@admin.register, @display, @action) typechecks', () => {
     const dir = startProject({ name: 'site', cwd: tmpDir('tsc-decorators'), db: 'd1' }).directory

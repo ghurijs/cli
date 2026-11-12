@@ -24,7 +24,10 @@ src/
   index.ts      Worker entry (createApp(settings))
   server.ts     Node / VPS entry
   settings.ts   settings: INSTALLED_APPS, MIDDLEWARE, DATABASES, STORAGES, …
-  urls.ts       URL patterns (admin at /admin/, REST API at /api/)
+  urls.ts       URL patterns (admin at /admin/, REST API at /api/{{#if graphql}}, GraphQL at /graphql/{{/if}})
+{{#if graphql}}
+  schema.ts     GraphQL schema (GRAPHQL.SCHEMA): merge your apps' Query / Mutation classes here
+{{/if}}
 ```
 
 Create an app with `{{exec}} ghuri startapp blog` — it is added to `INSTALLED_APPS` for you.
@@ -35,6 +38,23 @@ Then define models in `src/blog/models.ts` and run:
 {{exec}} ghuri migrate
 ```
 
+{{#if graphql}}
+## GraphQL
+
+`/graphql/` serves `src/schema.ts` with `@ghuri/graphql` (GraphiQL in the browser when `DEBUG=true`). Each app
+created with `ghuri startapp` has a commented `schema.ts` with a `ModelType`, a Relay connection with filters and
+mutations that reuse your REST serializers — uncomment it and add its classes to `src/schema.ts`.
+`{{exec}} ghuri graphql_schema --out schema.graphql` writes the SDL.
+
+{{else}}
+## GraphQL
+
+To add a GraphQL API later: `npm install @ghuri/graphql graphql`, add `GraphQLConfig` to `INSTALLED_APPS`, create
+`src/schema.ts` (`new Schema({ query: [...] })`), set `GRAPHQL: { SCHEMA: schema }` and route
+`path('graphql/', GraphQLView.asView())` — or start with `ghuri startproject --graphql`. Each app's `schema.ts`
+has a commented example.
+
+{{/if}}
 ## Useful commands
 
 | Command | What it does |

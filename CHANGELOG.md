@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `startproject --graphql` adds `@ghuri/graphql` + `graphql` to the dependencies, `GraphQLConfig` to `INSTALLED_APPS`, `src/schema.ts` (`GRAPHQL.SCHEMA`) and `GraphQLView` at `/graphql/`; the project README explains how to add GraphQL later otherwise. `startapp` writes a commented `schema.ts` (`ModelType` with Relay filters / ordering, `Query`, `SerializerMutation`, `ModelMutation`). `graphql` is a reserved app name. The strict typecheck test covers a `--graphql` project with the app schema uncommented.
 - Migration files are imported with the project's TypeScript loader (jiti) through `setMigrationImporter()`.
 - `--persist-to <dir>` and the default state directory now match `wrangler dev` (`<dir>/v3`, `.wrangler/state/v3` next to the wrangler config, absolute paths), so CLI commands and `wrangler dev` share local D1/R2/KV data from any working directory.
 - Generated `vitest.config.ts` enables oxc legacy decorators so `@action`, `@admin.register`, `@display` and `@tool` work in tests; longer test timeouts for D1/PGlite.

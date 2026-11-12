@@ -1,5 +1,6 @@
 {
   "when": {
-    "wrangler.jsonc": "cloudflare"
+    "wrangler.jsonc": "cloudflare",
+    "src/schema.ts": "graphql"
   }
 }

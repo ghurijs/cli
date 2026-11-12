@@ -11,6 +11,7 @@ const APP_FILES = [
   'app.ts',
   'migrations/index.ts',
   'models.ts',
+  'schema.ts',
   'serializers.ts',
   'tests.ts',
   'urls.ts',

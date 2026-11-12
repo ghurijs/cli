@@ -25,12 +25,18 @@
     "@ghuri/admin": "^0.1.0-alpha.0",
     "@ghuri/auth": "^0.1.0-alpha.0",
     "@ghuri/core": "^0.1.0-alpha.0",
+{{#if graphql}}
+    "@ghuri/graphql": "^0.1.0-alpha.0",
+{{/if}}
     "@ghuri/orm": "^0.1.0-alpha.0",
     "@ghuri/rest": "^0.1.0-alpha.0",
     "@ghuri/storage": "^0.1.0-alpha.0",
     "@hono/node-server": "^2.1.0",
 {{#if sqlite}}
     "better-sqlite3": "^13.1.0",
+{{/if}}
+{{#if graphql}}
+    "graphql": "^17.1.0",
 {{/if}}
     "hono": "^4.13.0",
     "jiti": "^2.7.0",

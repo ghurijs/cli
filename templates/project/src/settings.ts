@@ -20,6 +20,9 @@ import {
   SecurityMiddleware,
   XFrameOptionsMiddleware,
 } from '@ghuri/core'
+{{#if graphql}}
+import { GraphQLConfig } from '@ghuri/graphql'
+{{/if}}
 {{#if d1}}
 import { d1, postgres } from '@ghuri/orm'
 {{else}}
@@ -34,6 +37,9 @@ import { r2 } from '@ghuri/storage'
 {{else}}
 import { fileSystemStorage } from '@ghuri/storage/fs'
 {{/if}}
+{{#if graphql}}
+import { schema } from './schema'
+{{/if}}
 import { urlpatterns } from './urls'
 
 export default defineSettings((env) => ({
@@ -47,6 +53,9 @@ export default defineSettings((env) => ({
     SessionsConfig,
     AuthTokenConfig,
     AdminConfig,
+{{#if graphql}}
+    GraphQLConfig,
+{{/if}}
   ],
 
   MIDDLEWARE: [
@@ -103,6 +112,15 @@ export default defineSettings((env) => ({
     PAGE_SIZE: 20,
   },
 
+{{#if graphql}}
+  GRAPHQL: {
+    // Served by GraphQLView at /graphql/ (GraphiQL in the browser when DEBUG); `ghuri graphql_schema` prints it.
+    SCHEMA: schema,
+    // Same authentication as the REST API. Session POSTs need the CSRF token; token clients don't.
+    AUTHENTICATION_CLASSES: [SessionAuthentication, TokenAuthentication],
+  },
+
+{{/if}}
   TIME_ZONE: 'UTC',
   USE_TZ: true,
 }))
