@@ -31,7 +31,7 @@ import { postgres } from '@ghuri/orm'
 {{#if sqlite}}
 import { sqlite } from '@ghuri/orm/sqlite'
 {{/if}}
-import { IsAuthenticatedOrReadOnly, PageNumberPagination } from '@ghuri/rest'
+import { IsAuthenticatedOrReadOnly, PageNumberPagination, RestFrameworkConfig } from '@ghuri/rest'
 {{#if cloudflare}}
 import { r2 } from '@ghuri/storage'
 {{else}}
@@ -53,6 +53,7 @@ export default defineSettings((env) => ({
     SessionsConfig,
     AuthTokenConfig,
     AdminConfig,
+    RestFrameworkConfig,
 {{#if graphql}}
     GraphQLConfig,
 {{/if}}

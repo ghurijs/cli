@@ -24,7 +24,7 @@ src/
   index.ts      Worker entry (createApp(settings))
   server.ts     Node / VPS entry
   settings.ts   settings: INSTALLED_APPS, MIDDLEWARE, DATABASES, STORAGES, …
-  urls.ts       URL patterns (admin at /admin/, REST API at /api/{{#if graphql}}, GraphQL at /graphql/{{/if}})
+  urls.ts       URL patterns (admin at /admin/, REST API at /api/, API docs at /api/docs/{{#if graphql}}, GraphQL at /graphql/{{/if}})
 {{#if graphql}}
   schema.ts     GraphQL schema (GRAPHQL.SCHEMA): merge your apps' Query / Mutation classes here
 {{/if}}
@@ -37,6 +37,20 @@ Then define models in `src/blog/models.ts` and run:
 {{exec}} ghuri makemigrations
 {{exec}} ghuri migrate
 ```
+
+## REST API and OpenAPI
+
+Register viewsets on the `router` in `src/urls.ts` (mounted at `/api/`). The API describes itself as OpenAPI 3.1:
+
+| URL | What it serves |
+|---|---|
+| `/api/schema/` | The OpenAPI document (JSON) — import it into Postman, Insomnia or a client generator |
+| `/api/docs/` | Swagger UI |
+| `/api/reference/` | Scalar API reference |
+
+`{{exec}} ghuri generateschema --file openapi.yaml` writes the same document to a file (`openapi.json` for JSON).
+Adjust an operation with `@extendSchema({ summary, request, responses, tags })`, or set `schema = null` on a view to
+leave it out.
 
 {{#if graphql}}
 ## GraphQL
@@ -66,6 +80,7 @@ has a commented example.
 | `{{exec}} ghuri check` | System checks (`--deploy` for production checks) |
 | `{{exec}} ghuri test` | Run the tests (vitest) |
 | `{{exec}} ghuri dumpdata > data.json` | Export data as JSON fixtures |
+| `{{exec}} ghuri generateschema --file openapi.yaml` | Write the OpenAPI schema of the REST API |
 {{#if cloudflare}}
 | `{{exec}} ghuri deploy` | Apply remote migrations and `wrangler deploy` |
 {{/if}}

@@ -36,7 +36,7 @@ describe('startApp', () => {
     expect(r.registered).toBe(true)
     const settings = readFileSync(join(project, 'src/settings.ts'), 'utf8')
     expect(settings).toContain("import { BlogPostsConfig } from './blog_posts/app'")
-    expect(settings).toMatch(/AdminConfig,\n {4}BlogPostsConfig,\n {2}\]/)
+    expect(settings).toMatch(/RestFrameworkConfig,\n {4}BlogPostsConfig,\n {2}\]/)
     expect(readFileSync(join(r.directory, 'urls.ts'), 'utf8')).toContain("patterns('blog_posts', [")
   })
 

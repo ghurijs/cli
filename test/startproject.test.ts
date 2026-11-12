@@ -84,12 +84,40 @@ describe('startProject (d1)', () => {
     expect(settings).toContain("env.DATABASE_URL ? postgres({ url: env.DATABASE_URL }) : d1('DB')")
     expect(settings).toContain("default: r2('MEDIA')")
     expect(settings).toMatch(
-      /INSTALLED_APPS: \[\s+ContentTypesConfig,\s+AuthConfig,\s+SessionsConfig,\s+AuthTokenConfig,\s+AdminConfig,\s+\]/,
+      /INSTALLED_APPS: \[\s+ContentTypesConfig,\s+AuthConfig,\s+SessionsConfig,\s+AuthTokenConfig,\s+AdminConfig,\s+RestFrameworkConfig,\s+\]/,
     )
     expect(settings).toContain('REST_FRAMEWORK')
     expect(read(dir, 'src/urls.ts')).toContain("path('admin/', admin.site.urls)")
     expect(read(dir, 'src/urls.ts')).toContain("path('api/', include(router.urls))")
     expect(read(dir, 'src/index.ts')).toContain('export default createApp(settings)')
+  })
+
+  it('serves the OpenAPI schema with Swagger UI and Scalar, and installs generateschema', () => {
+    const settings = read(dir, 'src/settings.ts')
+    expect(settings).toContain(
+      "import { IsAuthenticatedOrReadOnly, PageNumberPagination, RestFrameworkConfig } from '@ghuri/rest'",
+    )
+    const urls = read(dir, 'src/urls.ts')
+    expect(urls).toContain(
+      "import { DefaultRouter, ScalarView, SchemaView, SwaggerUIView } from '@ghuri/rest'",
+    )
+    expect(urls).toContain(
+      "path('api/schema/', SchemaView.asView({ title: 'my_site API', version: '0.1.0' }), { name: 'schema' })",
+    )
+    expect(urls).toContain(
+      "path('api/docs/', SwaggerUIView.asView({ urlName: 'schema' }), { name: 'swagger-ui' })",
+    )
+    expect(urls).toContain(
+      "path('api/reference/', ScalarView.asView({ urlName: 'schema' }), { name: 'scalar' })",
+    )
+    // Before the router include, so a viewset registered as 'schema' or 'docs' can't shadow them.
+    expect(urls.indexOf("path('api/schema/'")).toBeLessThan(
+      urls.indexOf("path('api/', include(router.urls))"),
+    )
+    expect(urls).toContain("docs: '/api/docs/'")
+    const readme = read(dir, 'README.md')
+    expect(readme).toContain('## REST API and OpenAPI')
+    expect(readme).toContain('npx ghuri generateschema --file openapi.yaml')
   })
 
   it('suggests next steps', () => {
@@ -143,7 +171,7 @@ describe('startProject --graphql', () => {
     expect(pkg.dependencies.graphql).toBeTruthy()
     const settings = read(r.directory, 'src/settings.ts')
     expect(settings).toContain("import { GraphQLConfig } from '@ghuri/graphql'")
-    expect(settings).toMatch(/AdminConfig,\n {4}GraphQLConfig,\n {2}\]/)
+    expect(settings).toMatch(/AdminConfig,\n {4}RestFrameworkConfig,\n {4}GraphQLConfig,\n {2}\]/)
     expect(settings).toContain('SCHEMA: schema')
     expect(read(r.directory, 'src/urls.ts')).toContain(
       "path('graphql/', GraphQLView.asView(), { name: 'graphql' })",

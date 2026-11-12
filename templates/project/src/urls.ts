@@ -6,7 +6,7 @@ import { include, path } from '@ghuri/core'
 {{#if graphql}}
 import { GraphQLView } from '@ghuri/graphql'
 {{/if}}
-import { DefaultRouter } from '@ghuri/rest'
+import { DefaultRouter, ScalarView, SchemaView, SwaggerUIView } from '@ghuri/rest'
 import { serveMedia } from '@ghuri/storage'
 import type { Context } from 'hono'
 
@@ -15,15 +15,19 @@ export const router = new DefaultRouter()
 
 function home(c: Context) {
 {{#if graphql}}
-  return c.json({ project: '{{name}}', admin: '/admin/', api: '/api/', graphql: '/graphql/' })
+  return c.json({ project: '{{name}}', admin: '/admin/', api: '/api/', docs: '/api/docs/', graphql: '/graphql/' })
 {{else}}
-  return c.json({ project: '{{name}}', admin: '/admin/', api: '/api/' })
+  return c.json({ project: '{{name}}', admin: '/admin/', api: '/api/', docs: '/api/docs/' })
 {{/if}}
 }
 
 export const urlpatterns = [
   path('', home, { name: 'home' }),
   path('admin/', admin.site.urls),
+  // OpenAPI 3.1 schema of the REST API, read by Swagger UI and Scalar. `ghuri generateschema` writes it to a file.
+  path('api/schema/', SchemaView.asView({ title: '{{name}} API', version: '0.1.0' }), { name: 'schema' }),
+  path('api/docs/', SwaggerUIView.asView({ urlName: 'schema' }), { name: 'swagger-ui' }),
+  path('api/reference/', ScalarView.asView({ urlName: 'schema' }), { name: 'scalar' }),
   path('api/', include(router.urls)),
 {{#if graphql}}
   // GraphQL over HTTP; schema from GRAPHQL.SCHEMA (src/schema.ts).
