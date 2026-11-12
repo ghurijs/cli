@@ -73,7 +73,14 @@
     "@types/node": "^24.0.0",
     "hono": "^4.13.0",
     "wrangler": "^4.160.0",
-    "better-sqlite3": "^13.1.1"
+    "better-sqlite3": "^13.1.1",
+    "@cloudflare/workers-types": "^5.20261110.0",
+    "@ghuri/admin": "^0.1.0-alpha.0",
+    "@ghuri/auth": "^0.1.0-alpha.2",
+    "@ghuri/graphql": "^0.1.0-alpha.0",
+    "@ghuri/rest": "^0.1.0-alpha.1",
+    "@ghuri/storage": "^0.1.0-alpha.0",
+    "graphql": "^17.1.0"
   },
   "publishConfig": {
     "access": "public",
