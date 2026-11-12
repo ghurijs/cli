@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-alpha.4
+
+- `ghuri mcp`: new read-only `openapi_schema` tool: the project's OpenAPI document (via `@ghuri/rest` `generateschema`), as a list of operations by default or JSON filtered by `path` prefix or `tag`.
+- The project `AGENTS.md` lists `openapi_schema`.
+- Tests: the packages generated projects import are devDependencies, so CI typechecks generated code against them.
+
 ## 0.1.0-alpha.3
 
 - The `AGENTS.md` written by `startproject` covers social login (`@ghuri/socialauth`) and login strategies (`@ghuri/oauth`).
