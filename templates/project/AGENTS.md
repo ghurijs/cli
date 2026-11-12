@@ -188,6 +188,18 @@ export class ItemView extends View {
 Also: `reverse('shop:item', { id: 1 })`, `redirect(c, 'home')`, `TemplateView` (Hono JSX), `loginRequired(view)`
 and `permissionRequired('shop.change_item')(view)` from `@ghuri/auth`.
 
+**Social login and custom login flows** (not installed by default):
+
+- "Log in with GitHub / Google / Facebook / Microsoft / Discord / GitLab / any OIDC issuer", django-allauth style:
+  `npm install @ghuri/socialauth@next @ghuri/oauth@next`, add `SocialAuthConfig` to `INSTALLED_APPS`, configure
+  `SOCIALACCOUNT: { PROVIDERS: { github: { APP: { clientId: env.GITHUB_CLIENT_ID, secret: env.GITHUB_SECRET } } } }`,
+  route `path('accounts/', include(socialUrls))`, then `{{exec}} ghuri migrate`. Login buttons POST (with the CSRF
+  token) to `/accounts/<provider>/login/`; the provider's callback URL is `/accounts/<provider>/login/callback/`.
+- Your own flows (an OAuth2/OIDC provider in code, magic links, API bearer tokens), Passport.js style, with
+  `@ghuri/oauth`: `strategies.use('acme', new OIDCStrategy({ … }, verify))` and
+  `path('login/acme/', authenticate('acme', { failureRedirect: '/login/' }))`.
+- Docs: https://ghurijs.github.io/docs/topics/social-login/ and https://ghurijs.github.io/docs/topics/login-strategies/
+
 ## Rules
 
 1. **After any model change run `{{exec}} ghuri makemigrations` and then `{{exec}} ghuri migrate`.** Commit the

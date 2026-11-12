@@ -149,6 +149,8 @@ describe('startProject AI agent files', () => {
     expect(agents).toContain('npx ghuri mcp')
     expect(agents).toContain('/plugin install ghuri@ghuri')
     expect(agents).toContain('https://ghurijs.github.io/docs/llms-full.txt')
+    expect(agents).toContain('npm install @ghuri/socialauth@next @ghuri/oauth@next')
+    expect(agents).toContain('npx ghuri migrate`. Login buttons POST')
     expect(agents).toContain('running here on Cloudflare Workers')
     expect(agents).not.toContain('src/schema.ts')
     expect(read(r.directory, 'CLAUDE.md').split('\n')[0]).toBe('@AGENTS.md')
