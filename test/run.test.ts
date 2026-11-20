@@ -19,6 +19,7 @@ describe('help', () => {
       'shell',
       'check',
       'test',
+      'eval',
       'deploy',
       'version',
       'routes',
@@ -246,6 +247,55 @@ describe('commands that wrap tools', () => {
     expect(r.calls[0].args[0]).toMatch(/vitest/)
     expect(r.calls[0].args.slice(1)).toEqual(['run', 'src/demo', '--reporter=dot'])
     expect(r.calls[0].cwd).toBe(dir)
+  })
+
+  it('eval runs the eval files with vitest, passing models, repeat, case and report through env', async () => {
+    const dir = copyFixture('basic')
+    const { readFileSync, writeFileSync } = await import('node:fs')
+    writeFileSync(join(dir, 'vitest.config.ts'), 'export default { test: { testTimeout: 5 } }\n')
+    const calls: Array<{ args: string[]; cwd: string; env?: Record<string, string | undefined> }> = []
+    const spawn = async (
+      _cmd: string,
+      args: string[],
+      o: { cwd: string; env?: Record<string, string | undefined> },
+    ) => {
+      calls.push({ args, cwd: o.cwd, env: o.env })
+      return 0
+    }
+    const { code } = await run(
+      [
+        'eval',
+        '--models',
+        'anthropic:claude-haiku-5-5,anthropic:claude-opus-5-5',
+        '--repeat',
+        '3',
+        '--case',
+        'draft',
+        '--report',
+        'out',
+        '--reporter=dot',
+      ],
+      { cwd: dir, spawn },
+    )
+    expect(code).toBe(0)
+    const config = join(dir, 'node_modules', '.ghuri', 'vitest.eval.config.mjs')
+    expect(calls[0].args[0]).toMatch(/vitest/)
+    expect(calls[0].args.slice(1)).toEqual(['run', '--config', config, '--passWithNoTests', '--reporter=dot'])
+    expect(calls[0].cwd).toBe(dir)
+    expect(calls[0].env).toEqual({
+      GHURI_EVAL_MODELS: 'anthropic:claude-haiku-5-5,anthropic:claude-opus-5-5',
+      GHURI_EVAL_REPEAT: '3',
+      GHURI_EVAL_CASE: 'draft',
+      GHURI_EVAL_REPORT_DIR: join(dir, 'out'),
+    })
+    const source = readFileSync(config, 'utf8')
+    expect(source).toContain(`import base from ${JSON.stringify(join(dir, 'vitest.config.ts'))}`)
+    expect(source).toContain('"src/**/*.eval.ts"')
+    expect(source).toContain(`root: ${JSON.stringify(dir)}`)
+    expect(source).toContain('silent: false')
+    const bad = await run(['eval', '--repeat', 'many'], { cwd: dir, spawn })
+    expect(bad.code).not.toBe(0)
+    expect(bad.err).toContain('--repeat must be a positive whole number')
   })
 
   it('runserver wraps wrangler dev, or serves with Node when there is no wrangler config', async () => {

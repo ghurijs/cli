@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- `ghuri eval [--models <list>] [--repeat <n>] [--case <text>] [--report <dir>]`: runs agent eval suites
+  (`src/**/evals.ts`, `src/**/*.eval.ts`, `evals/**/*.eval.ts`) with vitest, one file at a time, through the
+  project's own vitest config, with console output always shown. The options are passed to
+  `@ghuri/agents/evals` as `GHURI_EVAL_*` environment variables. `ghuri test` is unchanged and does not run eval
+  files.
+
 ## 0.1.0-alpha.5
 
 - `startproject` adds `better-sqlite3` (`^13.1.0`) to the devDependencies of `d1` and `postgres` projects
