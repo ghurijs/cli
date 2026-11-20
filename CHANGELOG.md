@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-alpha.6
 
 - `ghuri eval [--models <list>] [--repeat <n>] [--case <text>] [--report <dir>]`: runs agent eval suites
   (`src/**/evals.ts`, `src/**/*.eval.ts`, `evals/**/*.eval.ts`) with vitest, one file at a time, through the
