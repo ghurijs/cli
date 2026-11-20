@@ -9,7 +9,7 @@ import {
   VersionCommand,
 } from './project'
 import { StartAppCommand, StartProjectCommand } from './scaffold'
-import { DeployCommand, RunServerCommand, TestCommand } from './server'
+import { DeployCommand, EvalCommand, RunServerCommand, TestCommand } from './server'
 
 export { BuiltinCommand } from './base'
 export { McpCommand } from './mcp'
@@ -31,5 +31,6 @@ export const BUILTIN_COMMANDS: Record<string, BuiltinCommandClass> = {
   startapp: StartAppCommand,
   startproject: StartProjectCommand,
   test: TestCommand,
+  eval: EvalCommand,
   version: VersionCommand,
 }
