@@ -13,6 +13,7 @@ const APP_FILES = [
   'models.ts',
   'schema.ts',
   'serializers.ts',
+  'tasks.ts',
   'tests.ts',
   'urls.ts',
   'views.ts',
@@ -33,10 +34,12 @@ describe('startApp', () => {
     expect(app).toContain("name = 'blog_posts'")
     expect(app).toContain('path = import.meta.dirname')
     expect(app).toContain('migrations = migrations')
+    expect(app).toContain("import * as tasks from './tasks'")
+    expect(app).toContain('tasks = tasks')
     expect(r.registered).toBe(true)
     const settings = readFileSync(join(project, 'src/settings.ts'), 'utf8')
     expect(settings).toContain("import { BlogPostsConfig } from './blog_posts/app'")
-    expect(settings).toMatch(/RestFrameworkConfig,\n {4}BlogPostsConfig,\n {2}\]/)
+    expect(settings).toMatch(/TasksConfig,\n {4}BlogPostsConfig,\n {2}\]/)
     expect(readFileSync(join(r.directory, 'urls.ts'), 'utf8')).toContain("patterns('blog_posts', [")
   })
 

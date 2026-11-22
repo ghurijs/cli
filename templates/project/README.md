@@ -79,6 +79,7 @@ has a commented example.
 | `{{exec}} ghuri routes` | List URL patterns and their names |
 | `{{exec}} ghuri check` | System checks (`--deploy` for production checks) |
 | `{{exec}} ghuri test` | Run the tests (vitest) |
+| `{{exec}} ghuri db_worker` | Run background tasks waiting in the database (`--beat` also fires crons) |
 | `{{exec}} ghuri dumpdata > data.json` | Export data as JSON fixtures |
 | `{{exec}} ghuri generateschema --file openapi.yaml` | Write the OpenAPI schema of the REST API |
 {{#if cloudflare}}
@@ -106,6 +107,7 @@ Ghuri is new, so coding agents tend to write Django, Prisma or plain Hono code i
 {{exec}} wrangler d1 create {{pkgName}}-db        # paste database_id into wrangler.jsonc
 {{/if}}
 {{exec}} wrangler r2 bucket create {{pkgName}}-media
+{{exec}} wrangler queues create {{pkgName}}-tasks
 {{exec}} wrangler secret put SECRET_KEY
 {{exec}} ghuri migrate --remote
 {{exec}} ghuri deploy
@@ -119,4 +121,6 @@ DATABASE_URL=postgres://… SECRET_KEY=… {{run}} start
 ```
 
 `src/server.ts` serves the same app with `@ghuri/core/node`. With `DATABASE_URL` set, `DATABASES`
-switches to Postgres — move existing data with `ghuri dumpdata` / `ghuri loaddata`.
+switches to Postgres — move existing data with `ghuri dumpdata` / `ghuri loaddata`. Background tasks wait in the
+database there: run `{{run}} worker` (`ghuri db_worker`, add `--beat` in one process for cron schedules) next to
+the server.

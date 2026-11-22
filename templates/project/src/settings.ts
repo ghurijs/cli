@@ -37,6 +37,11 @@ import { r2 } from '@ghuri/storage'
 {{else}}
 import { fileSystemStorage } from '@ghuri/storage/fs'
 {{/if}}
+{{#if cloudflare}}
+import { cloudflareQueues, database, TasksConfig } from '@ghuri/tasks'
+{{else}}
+import { database, TasksConfig } from '@ghuri/tasks'
+{{/if}}
 {{#if graphql}}
 import { schema } from './schema'
 {{/if}}
@@ -54,6 +59,7 @@ export default defineSettings((env) => ({
     AuthTokenConfig,
     AdminConfig,
     RestFrameworkConfig,
+    TasksConfig,
 {{#if graphql}}
     GraphQLConfig,
 {{/if}}
@@ -102,6 +108,19 @@ export default defineSettings((env) => ({
   CACHES: {
     // Workers KV when the CACHE binding exists, otherwise an in-memory cache.
     default: env.CACHE ? kvCache('CACHE') : memoryCache(),
+  },
+
+  TASKS: {
+{{#if cloudflare}}
+    // Background tasks (`task()` in an app's tasks.ts, then `await myTask.enqueue(...)`): Cloudflare Queues when
+    // the TASKS_QUEUE binding exists (wrangler.jsonc), otherwise the database — run `npm run worker`
+    // (ghuri db_worker) next to the server on Node.
+    default: env.TASKS_QUEUE ? cloudflareQueues({ queues: { default: 'TASKS_QUEUE' } }) : database(),
+{{else}}
+    // Background tasks (`task()` in an app's tasks.ts, then `await myTask.enqueue(...)`) wait in the database
+    // until `npm run worker` (ghuri db_worker) runs them. Run the worker next to the server.
+    default: database(),
+{{/if}}
   },
 
   AUTH_USER_MODEL: 'auth.User',
