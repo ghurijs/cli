@@ -2,6 +2,7 @@ import { AppConfig } from '@ghuri/core'
 import * as admin from './admin'
 import * as migrations from './migrations'
 import * as models from './models'
+import * as tasks from './tasks'
 
 export class {{className}} extends AppConfig {
   name = '{{name}}'
@@ -10,4 +11,5 @@ export class {{className}} extends AppConfig {
   models = models
   migrations = migrations
   admin = admin
+  tasks = tasks
 }

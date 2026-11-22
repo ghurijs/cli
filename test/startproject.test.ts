@@ -93,12 +93,31 @@ describe('startProject (d1)', () => {
     expect(settings).toContain("env.DATABASE_URL ? postgres({ url: env.DATABASE_URL }) : d1('DB')")
     expect(settings).toContain("default: r2('MEDIA')")
     expect(settings).toMatch(
-      /INSTALLED_APPS: \[\s+ContentTypesConfig,\s+AuthConfig,\s+SessionsConfig,\s+AuthTokenConfig,\s+AdminConfig,\s+RestFrameworkConfig,\s+\]/,
+      /INSTALLED_APPS: \[\s+ContentTypesConfig,\s+AuthConfig,\s+SessionsConfig,\s+AuthTokenConfig,\s+AdminConfig,\s+RestFrameworkConfig,\s+TasksConfig,\s+\]/,
     )
     expect(settings).toContain('REST_FRAMEWORK')
     expect(read(dir, 'src/urls.ts')).toContain("path('admin/', admin.site.urls)")
     expect(read(dir, 'src/urls.ts')).toContain("path('api/', include(router.urls))")
     expect(read(dir, 'src/index.ts')).toContain('export default createApp(settings)')
+  })
+
+  it('installs @ghuri/tasks: TasksConfig, TASKS on Queues or the database, a queue and crons in wrangler.jsonc', () => {
+    const settings = read(dir, 'src/settings.ts')
+    expect(settings).toContain("import { cloudflareQueues, database, TasksConfig } from '@ghuri/tasks'")
+    expect(settings).toContain(
+      "default: env.TASKS_QUEUE ? cloudflareQueues({ queues: { default: 'TASKS_QUEUE' } }) : database(),",
+    )
+    const pkg = JSON.parse(read(dir, 'package.json'))
+    expect(pkg.dependencies['@ghuri/tasks']).toBe(`^${GHURI_PACKAGE_VERSIONS['@ghuri/tasks']}`)
+    expect(pkg.scripts.worker).toBe('ghuri db_worker')
+    const cfg = parseJsonc(read(dir, 'wrangler.jsonc'))
+    expect(cfg.queues).toEqual({
+      producers: [{ binding: 'TASKS_QUEUE', queue: 'my-site-tasks' }],
+      consumers: [{ queue: 'my-site-tasks', max_retries: 3 }],
+    })
+    expect(cfg.triggers).toEqual({ crons: [] })
+    expect(read(dir, 'README.md')).toContain('wrangler queues create my-site-tasks')
+    expect(read(dir, 'AGENTS.md')).toContain('export const sendReceipt = task(')
   })
 
   it('serves the OpenAPI schema with Swagger UI and Scalar, and installs generateschema', () => {
@@ -211,6 +230,11 @@ describe('startProject (postgres / sqlite)', () => {
     expect(r.files).not.toContain('wrangler.jsonc')
     const pkg = JSON.parse(read(r.directory, 'package.json'))
     expect(pkg.scripts.dev).toBe('ghuri runserver --node')
+    expect(pkg.scripts.worker).toBe('ghuri db_worker')
+    const liteSettings = read(r.directory, 'src/settings.ts')
+    expect(liteSettings).toContain("import { database, TasksConfig } from '@ghuri/tasks'")
+    expect(liteSettings).toContain('    default: database(),')
+    expect(liteSettings).not.toContain('cloudflareQueues')
     expect(pkg.scripts.deploy).toBeUndefined()
     // a runtime dependency here, which also covers tests: not repeated in devDependencies
     expect(pkg.dependencies['better-sqlite3']).toBe('^13.1.0')
@@ -235,7 +259,9 @@ describe('startProject --graphql', () => {
     expect(pkg.devDependencies['better-sqlite3']).toBe('^13.1.0')
     const settings = read(r.directory, 'src/settings.ts')
     expect(settings).toContain("import { GraphQLConfig } from '@ghuri/graphql'")
-    expect(settings).toMatch(/AdminConfig,\n {4}RestFrameworkConfig,\n {4}GraphQLConfig,\n {2}\]/)
+    expect(settings).toMatch(
+      /AdminConfig,\n {4}RestFrameworkConfig,\n {4}TasksConfig,\n {4}GraphQLConfig,\n {2}\]/,
+    )
     expect(settings).toContain('SCHEMA: schema')
     expect(read(r.directory, 'src/urls.ts')).toContain(
       "path('graphql/', GraphQLView.asView(), { name: 'graphql' })",

@@ -16,6 +16,7 @@
     "start": "node --import jiti/register src/server.ts",
     "migrate": "ghuri migrate",
     "makemigrations": "ghuri makemigrations",
+    "worker": "ghuri db_worker",
     "check": "ghuri check",
     "test": "ghuri test",
     "typecheck": "tsc --noEmit",
@@ -31,6 +32,7 @@
     "@ghuri/orm": "{{ormRange}}",
     "@ghuri/rest": "{{restRange}}",
     "@ghuri/storage": "{{storageRange}}",
+    "@ghuri/tasks": "{{tasksRange}}",
     "@hono/node-server": "^2.1.0",
 {{#if sqlite}}
     "better-sqlite3": "^13.1.0",

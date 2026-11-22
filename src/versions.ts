@@ -15,6 +15,7 @@ export const GHURI_PACKAGE_VERSIONS = {
   '@ghuri/orm': '0.1.0-alpha.5',
   '@ghuri/rest': '0.1.0-alpha.2',
   '@ghuri/storage': '0.1.0-alpha.1',
+  '@ghuri/tasks': '0.1.0-alpha.0',
 } as const satisfies Record<string, string>
 
 export type GhuriPackageName = keyof typeof GHURI_PACKAGE_VERSIONS
