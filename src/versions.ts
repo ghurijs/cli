@@ -9,7 +9,7 @@
 export const GHURI_PACKAGE_VERSIONS = {
   '@ghuri/admin': '0.1.0-alpha.0',
   '@ghuri/auth': '0.1.0-alpha.4',
-  '@ghuri/cli': '0.1.0-alpha.6',
+  '@ghuri/cli': '0.1.0-alpha.7',
   '@ghuri/core': '0.1.0-alpha.5',
   '@ghuri/graphql': '0.1.0-alpha.3',
   '@ghuri/orm': '0.1.0-alpha.5',
