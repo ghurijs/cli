@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- New projects require `@ghuri/orm` 0.1.0-alpha.6 (cascading deletes with `SET_NULL` links on D1).
+
 ## 0.1.0-alpha.7
 
 - `startproject` installs `@ghuri/tasks`: `TasksConfig` in `INSTALLED_APPS`, `TASKS` on Cloudflare Queues when the
