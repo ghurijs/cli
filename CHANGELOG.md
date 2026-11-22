@@ -1,12 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-alpha.7
 
 - `startproject` installs `@ghuri/tasks`: `TasksConfig` in `INSTALLED_APPS`, `TASKS` on Cloudflare Queues when the
   `TASKS_QUEUE` binding exists and the database otherwise (`database()` only, for `--db sqlite`), an `npm run worker`
   script (`ghuri db_worker`), and in `wrangler.jsonc` a `<name>-tasks` queue (producer and consumer) and an empty
   `triggers.crons`. README and AGENTS.md cover tasks.
 - `startapp` writes `tasks.ts` (a commented example) and `tasks = tasks` in `app.ts`.
+- New projects depend on `@ghuri/core` 0.1.0-alpha.5 (the scheduler behind `ghuri db_worker --beat`) and
+  `@ghuri/tasks` 0.1.0-alpha.0.
 
 ## 0.1.0-alpha.6
 
