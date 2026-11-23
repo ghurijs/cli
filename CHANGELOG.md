@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-alpha.8
 
 - New projects require `@ghuri/orm` 0.1.0-alpha.6 (cascading deletes with `SET_NULL` links on D1).
 - New projects require `@ghuri/tasks` 0.1.0-alpha.1: with 0.1.0-alpha.0 the Worker of every new project failed to start
