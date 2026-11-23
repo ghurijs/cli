@@ -80,7 +80,7 @@
     "@ghuri/graphql": "^0.1.0-alpha.0",
     "@ghuri/rest": "^0.1.0-alpha.1",
     "@ghuri/storage": "^0.1.0-alpha.0",
-    "@ghuri/tasks": "^0.1.0-alpha.0",
+    "@ghuri/tasks": "^0.1.0-alpha.1",
     "graphql": "^17.1.0"
   },
   "publishConfig": {
